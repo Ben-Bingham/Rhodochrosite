@@ -21,7 +21,9 @@ project "Rhodochrosite"
 		-- Dependencies
 		"%{wks.location}/Dependencies/Gemstone/Malachite/src",
 		"%{wks.location}/Dependencies/Gemstone/Ruby/src",
-		"%{wks.location}/Dependencies/Gemstone/Lazuli/src"
+		"%{wks.location}/Dependencies/Gemstone/Lazuli/src",
+		"%{wks.location}/Dependencies/Gemstone/Wavellite/src",
+		"%{wks.location}/Dependencies/Gemstone/Pyrite/src"
 	}
 
 	libdirs {
@@ -37,5 +39,7 @@ project "Rhodochrosite"
 		-- Dependencies
 		"Malachite",
 		"Ruby",
-		"Lazuli"
+		"Lazuli",
+		"Wavellite",
+		"Pyrite"
 	}

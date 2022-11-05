@@ -1,6 +1,9 @@
 require "Dependencies/Gemstone/Lazuli/premake5"
 require "Dependencies/Gemstone/Malachite/premake5"
 require "Dependencies/Gemstone/Ruby/premake5"
+require "Dependencies/Gemstone/Wavellite/premake5"
+require "Dependencies/Gemstone/Pyrite/premake5"
+require "Dependencies/Gemstone/vendor/imgui/premake5"
 
 workspace "Rhodochrosite"
 	configurations {"Debug", "Release"}
@@ -40,4 +43,10 @@ workspace "Rhodochrosite"
 		project_Lazuli("Dependencies/Gemstone/")
 		project_Malachite("Dependencies/Gemstone/")
 		project_Ruby("Dependencies/Gemstone/")
+		project_Wavellite("Dependencies/Gemstone/")
+		project_Pyrite("Dependencies/Gemstone/")
+	group ""
+
+	group "Vendor"
+		project_ImGui("Dependencies/Gemstone/")
 	group ""
