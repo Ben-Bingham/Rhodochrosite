@@ -18,6 +18,7 @@ project "Rhodochrosite"
 		"%{wks.location}/Dependencies/Gemstone/vendor/GLFW/include",
 		"%{wks.location}/Dependencies/Gemstone/vendor/glew-2.1.0/include",
 		"%{wks.location}/Dependencies/Gemstone/vendor/stb_image",
+		"%{wks.location}/Dependencies/Gemstone/vendor/imgui/src",
 		-- Dependencies
 		"%{wks.location}/Dependencies/Gemstone/Malachite/src",
 		"%{wks.location}/Dependencies/Gemstone/Ruby/src",
@@ -41,5 +42,6 @@ project "Rhodochrosite"
 		"Ruby",
 		"Lazuli",
 		"Wavellite",
-		"Pyrite"
+		"Pyrite",
+		"ImGui"
 	}
