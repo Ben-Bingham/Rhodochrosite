@@ -1,0 +1,6 @@
+[submodule "Gemstone"]
+	path = Gemstone
+	url = https://github.com/Ben-Bingham/Gemstone
+[submodule "Dependencies/Gemstone"]
+	path = Dependencies/Gemstone
+	url = https://github.com/Ben-Bingham/Gemstone
