@@ -15,6 +15,12 @@ int main() {
 
 	Rhodochrosite::Renderer rayTracer{ window.getWidth(), window.getHeight() };
 
+	Rhodochrosite::Sphere sphere{ Malachite::Vector3f{0.0f, 0.0f, -5.0f }, 0.5f, Ruby::Colour::black };
+	rayTracer.addSphere(sphere);
+
+	Rhodochrosite::Sphere sphere1{ Malachite::Vector3f{0.5f, 0.0f, -4.0f }, 0.25f, Ruby::Colour::pink };
+	rayTracer.addSphere(sphere1);
+
 	Ruby::Texture renderTarget{ rayTracer.getImage()};
 	Ruby::ScreenQuad screenQuad{ &renderTarget };
 
@@ -25,14 +31,12 @@ int main() {
 			window.close();
 		}
 
-		{
-			// Ray tracing
+		{ // Ray tracing
 			rayTracer.render();
 			renderTarget.updateData();
 		}
 
-		{
-			// Rendering
+		{ // Rendering
 			renderer.prep(cam.getViewMatrix());
 			{
 				renderer.screenQuadRenderingPrep();
@@ -46,6 +50,12 @@ int main() {
 
 				{
 					ImGui::Begin("Settings");
+
+					if(ImGui::Button("Render")) {
+						rayTracer.render();
+						renderTarget.updateData();
+					}
+
 					ImGui::Text("Frame Time: ");
 					ImGui::Text((std::to_string(time.deltaTime * 1000.0f) + "miliseconds").c_str());
 
