@@ -8,12 +8,8 @@ namespace Rhodochrosite {
 	float Ray::hitSphere(const Sphere& sphere) const {
 		const Malachite::Vector3f distanceBetween = origin - sphere.origin;
 
-		//const float dirLength = direction.length();
 		const float a = direction.lengthSquared();
-
 		const float halfB = dot(distanceBetween, direction);
-
-		//const float disBetweenLength = distanceBetween.length();
 		const float c = distanceBetween.lengthSquared() - (sphere.radius * sphere.radius);
 
 		const float discriminant = halfB * halfB - a * c;
@@ -24,7 +20,7 @@ namespace Rhodochrosite {
 		return (-halfB - std::sqrt(discriminant)) / a;
 	}
 
-	Malachite::Vector3f Ray::at(float distance) const {
+	Malachite::Vector3f Ray::at(const float distance) const {
 		return distance * direction + origin;
 	}
 }
