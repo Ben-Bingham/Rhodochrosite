@@ -32,13 +32,17 @@ namespace Rhodochrosite {
 		}
 	}
 
-	void Renderer::setDirectionalLight(const Ruby::DirectionalLight dirLight) {
-		m_DirectionalLight = dirLight;
+	void Renderer::setScene(const Scene& scene) {
+		m_Scene = scene;
 	}
 
-	void Renderer::setSphere(const Sphere& sphere) {
-		m_Sphere = sphere;
-	}
+	//void Renderer::setDirectionalLight(const Ruby::DirectionalLight dirLight) {
+	//	m_DirectionalLight = dirLight;
+	//}
+
+	//void Renderer::setSphere(const Sphere& sphere) {
+	//	m_Sphere = sphere;
+	//}
 
 
 	/*void Renderer::addSphere(const Sphere& sphere) {
@@ -56,8 +60,8 @@ namespace Rhodochrosite {
 
 		// Discriminant calculations
 		const float a = dot(ray.direction, ray.direction);
-		const float b = 2.0f * dot(ray.origin - m_Sphere.origin, ray.direction);
-		const float c = dot(ray.origin - m_Sphere.origin, ray.origin - m_Sphere.origin) - (m_Sphere.radius * m_Sphere.radius);
+		const float b = 2.0f * dot(ray.origin - m_Scene.spheres[0].origin, ray.direction);
+		const float c = dot(ray.origin - m_Scene.spheres[0].origin, ray.origin - m_Scene.spheres[0].origin) - (m_Scene.spheres[0].radius * m_Scene.spheres[0].radius);
 
 		const float discriminant = b * b - 4.0f * a * c;
 		if (discriminant < 0.0f) {
@@ -69,12 +73,12 @@ namespace Rhodochrosite {
 		const Malachite::Vector3f hitPosition = ray.at(hitDistance);
 
 		// Lighting Calculations
-		Malachite::Vector3f normal = hitPosition - m_Sphere.origin;
+		Malachite::Vector3f normal = hitPosition - m_Scene.spheres[0].origin;
 		normal = normal.normalize();
 
-		const float lightIntensity = Malachite::max(dot(normal, -m_DirectionalLight.direction), 0.0f);
+		const float lightIntensity = Malachite::max(dot(normal, -m_Scene.lights[0].direction), 0.0f);
 
-		const Malachite::Vector4f sphereColour = m_Sphere.colour.colour * lightIntensity;
+		const Malachite::Vector4f sphereColour = m_Scene.spheres[0].colour.colour * lightIntensity;
 		return Ruby::Colour{ sphereColour.x, sphereColour.y, sphereColour.z, 1.0f };
 	}
 }

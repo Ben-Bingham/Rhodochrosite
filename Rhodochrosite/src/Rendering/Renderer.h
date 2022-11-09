@@ -3,10 +3,29 @@
 #include "Camera.h"
 #include "Image.h"
 #include "Lights.h"
+#include "Scene.h"
 #include "Sphere.h"
 #include "Vector.h"
 
 namespace Rhodochrosite {
+	enum class RenderingDevice {
+		GPU,
+		CPU
+	};
+
+	enum class RenderingAlgorithm {
+		BASIC_LIGHTING,
+		ALL_DIFFUSE,
+		ALL_REFLECTIVE,
+		RANDOM_MATERIALS
+	};
+
+	enum class SceneName {
+		ONE_SPHERE,
+		TWO_SPHERE,
+		LARGE_AMOUNT_OF_SPHERES
+	};
+
 	class Renderer {
 	public:
 		Renderer(unsigned int width, unsigned int height, Ruby::Camera& camera);
@@ -14,10 +33,7 @@ namespace Rhodochrosite {
 		void render();
 		Ruby::Image& getImage() { return m_RenderImage; }
 
-		//void addSphere(const Sphere& sphere);
-
-		void setSphere(const Sphere& sphere);
-		void setDirectionalLight(const Ruby::DirectionalLight dirLight);
+		void setScene(const Scene& scene);
 
 	private:
 		[[nodiscard]] Ruby::Colour perPixelCalculations(const Malachite::Vector2f& texCords) const;
@@ -28,10 +44,7 @@ namespace Rhodochrosite {
 
 		Ruby::Camera& m_Camera;
 
-		//std::vector<Sphere> m_Spheres;
-		Sphere m_Sphere{ Malachite::Vector3f{0.0f, 0.0f, -2.0f}, 0.5f, Ruby::Colour::pink };
-		Ruby::DirectionalLight m_DirectionalLight{ Malachite::Vector3f{-1.0f, -1.0f, -1.0f}.normalize() };
-		//std::vector<Ruby::DirectionalLight> m_DirectionalLights;
+		Scene m_Scene;
 
 		unsigned int m_NumberOfSamples = 2;
 		unsigned int m_NumberOfBounces = 4;
