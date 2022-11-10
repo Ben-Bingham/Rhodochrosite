@@ -1,5 +1,7 @@
 #include "Scenes.h"
 
+#include "Random.h"
+
 namespace Rhodochrosite {
 	Scenes::Scenes()
 		: oneSphere(oneSphereInit())
@@ -46,9 +48,19 @@ namespace Rhodochrosite {
 
 	Scene Scenes::randomSpheresInit() {
 		Scene scene;
-		scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{0.0f, -100.5f, 0.0f}, 100.0f, Ruby::Colour::pink }); // Floor
-		scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{0.0f, 0.0f, -2.0f}, 0.5f, Ruby::Colour::pink });
-		scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{1.0f, 0.0f, -4.0f}, 0.75f, Ruby::Colour::blue });
+		scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{0.0f, -10000.5f, 0.0f}, 10000.0f, Ruby::Colour{88, 104, 117} }); // Floor
+
+		const auto numberOfSpheres = Malachite::random<unsigned int>(20, 25);
+		for (unsigned int i = 0; i < numberOfSpheres; i++) {
+			const auto xPos = Malachite::random<float>(-5.0f, 5.0f);
+			const auto yPos = Malachite::random<float>(-0.5f, 5.0f);
+			const auto zPos = Malachite::random<float>(-0.5f, -20.0f);
+			const auto radius = Malachite::random<float>(0.25f, 1.5f);
+			auto colour = Malachite::random<float>(Malachite::Vector4f{ 0.0f }, Malachite::Vector4f{ 1.0f });
+			colour.w = 1.0f;
+
+			scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{xPos, yPos, zPos}, radius, Ruby::Colour{colour} });
+		}
 
 		scene.lights.emplace_back(Ruby::DirectionalLight{ Malachite::Vector3f{-1.0f, -1.0f, -1.0f}.normalize() });
 		return scene;

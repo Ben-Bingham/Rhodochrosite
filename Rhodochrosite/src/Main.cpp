@@ -327,8 +327,8 @@ void setAlgorithm(Rhodochrosite::RenderingAlgorithm newAlgorithm) {
 		rayTracer->setAlgorithm(&Rhodochrosite::Renderer::basicLightingAlgorithm);
 
 		// GPU side
-		Ruby::VertexShader vert{ Ruby::TextFile{"assets\\shaders\\RayTracing.vert"} };
-		Ruby::FragmentShader frag{ Ruby::TextFile{"assets\\shaders\\RayTracing.frag"} };
+		Ruby::VertexShader vert{ Ruby::TextFile{"assets\\shaders\\BasicLighting.vert"} };
+		Ruby::FragmentShader frag{ Ruby::TextFile{"assets\\shaders\\BasicLighting.frag"} };
 
 		activeProgram = std::make_unique<Ruby::ShaderProgram>(vert, frag, std::vector<Ruby::Attribute>{ 3, 2 });
 		break;
