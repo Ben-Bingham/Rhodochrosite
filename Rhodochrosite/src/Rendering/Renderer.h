@@ -2,7 +2,6 @@
 
 #include "Camera.h"
 #include "Image.h"
-#include "Lights.h"
 #include "Scene.h"
 #include "Sphere.h"
 #include "Vector.h"
@@ -23,7 +22,8 @@ namespace Rhodochrosite {
 	enum class SceneName {
 		ONE_SPHERE,
 		TWO_SPHERE,
-		LARGE_AMOUNT_OF_SPHERES
+		LARGE_AMOUNT_OF_SPHERES,
+		RANDOM_SPHERES
 	};
 
 	class Renderer {
@@ -34,9 +34,11 @@ namespace Rhodochrosite {
 		Ruby::Image& getImage() { return m_RenderImage; }
 
 		void setScene(const Scene& scene);
+		void setAlgorithm(Ruby::Colour(Renderer::* algorithm)(const Malachite::Vector2f& texCords) const);
+
+		[[nodiscard]] Ruby::Colour basicLightingAlgorithm(const Malachite::Vector2f& texCords) const;
 
 	private:
-		[[nodiscard]] Ruby::Colour perPixelCalculations(const Malachite::Vector2f& texCords) const;
 
 		Ruby::Image m_RenderImage;
 		unsigned int m_Width;
@@ -46,7 +48,6 @@ namespace Rhodochrosite {
 
 		Scene m_Scene;
 
-		unsigned int m_NumberOfSamples = 2;
-		unsigned int m_NumberOfBounces = 4;
+		Ruby::Colour(Renderer::* m_PerPixelAlgorithm)(const Malachite::Vector2f& texCords) const;
 	};
 }

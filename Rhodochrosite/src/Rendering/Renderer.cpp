@@ -2,25 +2,26 @@
 
 #include <vector>
 
-#include "Random.h"
 #include "Ray.h"
 #include "Utility.h"
 
 namespace Rhodochrosite {
 	Renderer::Renderer(const unsigned int width, const unsigned int height, Ruby::Camera& camera)
-		: m_RenderImage(Malachite::Vector4f{ 1.0f }, width, height), m_Width(width), m_Height(height), m_Camera(camera) {
-
-	}
+		: m_RenderImage(Malachite::Vector4f{1.0f}, width, height)
+		, m_Width(width)
+		, m_Height(height)
+		, m_Camera(camera)
+		, m_PerPixelAlgorithm(&Renderer::basicLightingAlgorithm) { }
 
 	void Renderer::render() {
 		std::vector<unsigned char>& content = m_RenderImage.getContent();
 		for (unsigned int y = 0; y < m_Height; y++) {
 			for (unsigned int x = 0; x < m_Width; x++) {
-				Malachite::Vector2f cord = { static_cast<float>(x) / static_cast<float>(m_Width), static_cast<float>(y) / static_cast<float>(m_Height) };
+				Malachite::Vector2f cord = {static_cast<float>(x) / static_cast<float>(m_Width), static_cast<float>(y) / static_cast<float>(m_Height)};
 				cord.x = cord.x * 2.0f - 1.0f;
 				cord.y = (cord.y * 2.0f - 1.0f) * (static_cast<float>(m_Height) / static_cast<float>(m_Width));
 
-				Ruby::Colour pixelColour = perPixelCalculations(cord);
+				Ruby::Colour pixelColour = (this->*m_PerPixelAlgorithm)(cord);
 
 				const Malachite::Vector4uc colourData = pixelColour.toVec4();
 
@@ -36,49 +37,58 @@ namespace Rhodochrosite {
 		m_Scene = scene;
 	}
 
-	//void Renderer::setDirectionalLight(const Ruby::DirectionalLight dirLight) {
-	//	m_DirectionalLight = dirLight;
-	//}
-
-	//void Renderer::setSphere(const Sphere& sphere) {
-	//	m_Sphere = sphere;
-	//}
-
-
-	/*void Renderer::addSphere(const Sphere& sphere) {
-		m_Spheres.push_back(sphere);
-	}*/
-
-	/*void Renderer::addDirectionalLight(const Ruby::DirectionalLight& light) {
-		m_DirectionalLights.push_back(light);
-	}*/
+	void Renderer::setAlgorithm(Ruby::Colour (Renderer::* algorithm)(const Malachite::Vector2f& texCords) const) {
+		m_PerPixelAlgorithm = algorithm;
+	}
 
 	constexpr float infinity = std::numeric_limits<float>::max();
 
-	[[nodiscard]] Ruby::Colour Renderer::perPixelCalculations(const Malachite::Vector2f& texCords) const {
-		const Ray ray{ m_Camera.position, Malachite::Vector3f{texCords.x, texCords.y, -1.0f} };
+	[[nodiscard]] Ruby::Colour Renderer::basicLightingAlgorithm(const Malachite::Vector2f& texCords) const {
+		const Ray ray{ Malachite::Vector3f::zero, Malachite::Vector3f{texCords.x, texCords.y, -1.f} };
 
-		// Discriminant calculations
-		const float a = dot(ray.direction, ray.direction);
-		const float b = 2.0f * dot(ray.origin - m_Scene.spheres[0].origin, ray.direction);
-		const float c = dot(ray.origin - m_Scene.spheres[0].origin, ray.origin - m_Scene.spheres[0].origin) - (m_Scene.spheres[0].radius * m_Scene.spheres[0].radius);
+		const Sphere* hitSphere{ nullptr };
+		float closestHit= infinity;
+		for (unsigned int i = 0; i < m_Scene.spheres.size(); i++) {
+			// Discriminant calculations
+			const float a = dot(ray.direction, ray.direction);
+			const float b = 2.0f * dot(ray.origin - m_Scene.spheres[i].origin, ray.direction);
+			const float c = dot(ray.origin - m_Scene.spheres[i].origin, ray.origin - m_Scene.spheres[i].origin) - (m_Scene.spheres[i].radius * m_Scene.spheres[i].radius);
 
-		const float discriminant = b * b - 4.0f * a * c;
-		if (discriminant < 0.0f) {
+			const float discriminant = b * b - 4.0f * a * c;
+			if (discriminant < 0.0f) {
+				continue;
+			}
+
+			// Solving the quadratic formula
+			const float hitDistance = (-b - std::sqrt(discriminant)) / 2.0f * a;
+			if (hitDistance < 0.0f) {
+				continue;
+			}
+
+			if (hitDistance < closestHit) {
+				closestHit = hitDistance;
+				hitSphere = &m_Scene.spheres[i];
+			}
+		}
+
+		if (hitSphere == nullptr) {
 			return Ruby::Colour::black;
 		}
 
-		// Solving the quadratic formula
-		const float hitDistance = (-b - std::sqrt(discriminant)) / 2.0f * a;
-		const Malachite::Vector3f hitPosition = ray.at(hitDistance);
+		const Malachite::Vector3f hitPosition = ray.at(closestHit);
 
 		// Lighting Calculations
-		Malachite::Vector3f normal = hitPosition - m_Scene.spheres[0].origin;
+		Malachite::Vector3f normal = hitPosition - hitSphere->origin;
 		normal = normal.normalize();
 
-		const float lightIntensity = Malachite::max(dot(normal, -m_Scene.lights[0].direction), 0.0f);
+		float lightIntensity{ 0.0f };
+		for (unsigned int i = 0; i < m_Scene.lights.size(); i++) {
+			lightIntensity += Malachite::max(dot(normal, -m_Scene.lights[i].direction), 0.0f);
+		}
 
-		const Malachite::Vector4f sphereColour = m_Scene.spheres[0].colour.colour * lightIntensity;
-		return Ruby::Colour{ sphereColour.x, sphereColour.y, sphereColour.z, 1.0f };
+		lightIntensity = Malachite::clamp(lightIntensity, 0.0f, 1.0f);
+
+		const Malachite::Vector4f sphereColour = hitSphere->colour.colour * lightIntensity;
+		return Ruby::Colour{sphereColour.x, sphereColour.y, sphereColour.z, 1.0f};
 	}
 }

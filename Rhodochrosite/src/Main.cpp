@@ -3,6 +3,7 @@
 #include "Timing.h"
 #include "Renderer.h"
 #include "Scene.h"
+#include "Scenes.h"
 
 #include "Rendering/Renderer.h"
 #include "Renderable Objects/ScreenQuad/ScreenQuad.h"
@@ -16,35 +17,86 @@ void setAlgorithm(Rhodochrosite::RenderingAlgorithm newAlgorithm);
 std::unique_ptr<Ruby::ShaderProgram> activeProgram{ nullptr };
 std::unique_ptr<Rhodochrosite::Renderer> rayTracer{ nullptr };
 
-Rhodochrosite::Scene oneSphereScene;
+Rhodochrosite::Scenes sceneCollection;
+
+// Camera stuff
+Ruby::Camera camera{};
+struct FPSController {
+	bool firstMouse = true;
+	int lastX = 0;
+	int lastY = 0;
+	float mouseSensitivity = 0.1f;
+	Malachite::Degree yaw = -90.0f;
+	Malachite::Degree pitch;
+	Wavellite::Mouse* mouse{ nullptr };
+};
+FPSController fpsController{ };
+bool cursorNormal = false;
+
+void mousePositionCallback(int xpos, int ypos, void* data) {
+	FPSController* controller = (FPSController*)data;
+
+	if (controller->firstMouse) {
+		controller->lastX = (int)xpos;
+		controller->lastY = (int)ypos;
+		controller->firstMouse = false;
+	}
+
+	float xOffset = (float)(xpos - controller->lastX);
+	float yOffset = (float)(controller->lastY - ypos);
+	controller->lastX = (int)xpos;
+	controller->lastY = (int)ypos;
+
+	xOffset *= controller->mouseSensitivity;
+	yOffset *= controller->mouseSensitivity;
+
+	if (controller->mouse != nullptr && controller->mouse->button2 && device == Rhodochrosite::RenderingDevice::GPU) {
+		LOG("Mouse Movement");
+		controller->yaw += xOffset;
+		controller->pitch += yOffset;
+
+		if (controller->pitch > 89.0f)
+			controller->pitch = 89.0f;
+		if (controller->pitch < -89.0f)
+			controller->pitch = -89.0f;
+
+		Malachite::Vector3f direction;
+		direction.x = cos(Malachite::degreesToRadians(controller->yaw)) * cos(Malachite::degreesToRadians(controller->pitch));
+		direction.y = sin(Malachite::degreesToRadians(controller->pitch));
+		direction.z = sin(Malachite::degreesToRadians(controller->yaw)) * cos(Malachite::degreesToRadians(controller->pitch));
+
+		camera.front = direction.normalize();
+		camera.updateCameraVectors();
+	}
+}
 
 int main() {
 	// Quad Rendering Setup
 	Wavellite::Window window{Wavellite::Window::WindowSize::HALF_SCREEN, "Rhodochrosite"};
 	window.setSwapInterval(0);
-	const Wavellite::Keyboard* keyboard = window.ioManger.getKeyboard();
+	Wavellite::Keyboard* const keyboard = window.ioManger.getKeyboard();
+	Wavellite::Mouse* const mouse = window.ioManger.getMouse();
+	fpsController.mouse = mouse;
+
+	mouse->addMousePositionCallback(mousePositionCallback, (void*)&fpsController);
 
 	Ruby::Renderer renderer{};
 	Ruby::Camera cam{};
 	Wavellite::Time time{};
 
 	// Scene Setup
-	oneSphereScene.spheres.emplace_back(Rhodochrosite::Sphere{ Malachite::Vector3f{0.0f, 0.0f, -2.0f}, 0.5f, Ruby::Colour::pink });
-	oneSphereScene.lights.emplace_back(Ruby::DirectionalLight{ Malachite::Vector3f{-1.0f, -1.0f, -1.0f}.normalize() });
-
-	// Shader Setup
-		//TODO
+	sceneCollection = Rhodochrosite::Scenes{};
 
 	// Ray tracing Setup
-	Ruby::Camera camera{};
 	rayTracer = std::make_unique<Rhodochrosite::Renderer>( window.getWidth(), window.getHeight(), camera );
 
+	Ruby::Texture renderTarget{ rayTracer->getImage() };
+	Ruby::ScreenQuad screenQuad{ &renderTarget };
+
+	// Default values
 	device = Rhodochrosite::RenderingDevice::CPU;
 	setAlgorithm(Rhodochrosite::RenderingAlgorithm::BASIC_LIGHTING);
 	setScene(Rhodochrosite::SceneName::ONE_SPHERE);
-
-	Ruby::Texture renderTarget{ rayTracer->getImage()};
-	Ruby::ScreenQuad screenQuad{ &renderTarget };
 
 	renderer.init(window.getProjectionMatrix());
 
@@ -72,6 +124,7 @@ int main() {
 				activeProgram->use();
 				Ruby::ShaderProgram::upload("aspectRatio", (float)window.getHeight() / (float)window.getWidth());
 				Ruby::ShaderProgram::upload("cameraPosition", camera.position);
+				Ruby::ShaderProgram::upload("viewMatrix", camera.getViewMatrix());
 
 				screenQuad.render();
 				break;
@@ -79,13 +132,19 @@ int main() {
 		}
 
 		{ // Camera Movement
-			/*const float velocity = 5.0f * time.deltaTime;
-			if (keyboard->KEY_W) { camera.position = camera.position + (velocity * Malachite::Vector3f::north); }
-			if (keyboard->KEY_S) { camera.position = camera.position + (velocity * Malachite::Vector3f::south); }
-			if (keyboard->KEY_A) { camera.position = camera.position + (velocity * Malachite::Vector3f::west); }
-			if (keyboard->KEY_D) { camera.position = camera.position + (velocity * Malachite::Vector3f::east); }
-			if (keyboard->KEY_SPACE) { camera.position = camera.position + (velocity * Malachite::Vector3f::up); }
-			if (keyboard->KEY_LEFT_SHIFT) { camera.position = camera.position + (velocity * Malachite::Vector3f::down); }*/
+			if (mouse->button2 && device == Rhodochrosite::RenderingDevice::GPU) {
+				window.disableCursor();
+				const float velocity = 5.0f * time.deltaTime;
+				if (keyboard->KEY_W) { camera.position = camera.position + (velocity * camera.front); }
+				if (keyboard->KEY_S) { camera.position = camera.position + (velocity * -camera.front); }
+				if (keyboard->KEY_A) { camera.position = camera.position + (velocity * -camera.right); }
+				if (keyboard->KEY_D) { camera.position = camera.position + (velocity * camera.right); }
+				if (keyboard->KEY_SPACE) { camera.position = camera.position + (velocity * Malachite::Vector3f::up); }
+				if (keyboard->KEY_LEFT_SHIFT) { camera.position = camera.position + (velocity * Malachite::Vector3f::down); }
+			}
+			else {
+				window.enableCursor();
+			}
 		}
 
 		{ // Rendering
@@ -107,6 +166,9 @@ int main() {
 							break;
 						case Rhodochrosite::SceneName::LARGE_AMOUNT_OF_SPHERES:
 							status += "Currently rendering a lot of spheres ";
+							break;
+						case Rhodochrosite::SceneName::RANDOM_SPHERES:
+							status += "Currently rendering a random collection of spheres ";
 							break;
 						}
 
@@ -172,6 +234,11 @@ int main() {
 						setAlgorithm(algorithm);
 						setScene(Rhodochrosite::SceneName::LARGE_AMOUNT_OF_SPHERES);
 					}
+					if (ImGui::Button("Random Spheres")) {
+						setAlgorithm(algorithm);
+						sceneCollection.regenerateRandomSpheres();
+						setScene(Rhodochrosite::SceneName::RANDOM_SPHERES);
+					}
 
 					ImGui::Text("Frame Time: ");
 					ImGui::Text((std::to_string(time.deltaTime * 1000.0f) + "miliseconds").c_str());
@@ -192,23 +259,25 @@ int main() {
 	renderer.imGuiTerminate();
 }
 
-void uploadSphere(const Rhodochrosite::Sphere& sphere) {
-	Ruby::ShaderProgram::upload("sphere.origin", sphere.origin);
-	Ruby::ShaderProgram::upload("sphere.radius", sphere.radius);
-	Ruby::ShaderProgram::upload("sphere.colour", sphere.colour.colour);
+void uploadSphere(const Rhodochrosite::Sphere& sphere, unsigned int index) {
+	Ruby::ShaderProgram::upload("spheres[" + std::to_string(index) + "].origin", sphere.origin);
+	Ruby::ShaderProgram::upload("spheres[" + std::to_string(index) + "].radius", sphere.radius);
+	Ruby::ShaderProgram::upload("spheres[" + std::to_string(index) + "].colour", sphere.colour.colour);
 }
 
-void uploadLight(const Ruby::DirectionalLight& light) {
-	Ruby::ShaderProgram::upload("dirLight.direction", light.direction);
+void uploadLight(const Ruby::DirectionalLight& light, unsigned int index) {
+	Ruby::ShaderProgram::upload("dirLights[" + std::to_string(index) + "].direction", light.direction);
 }
 
 void uploadScene(const Rhodochrosite::Scene& scene) {
-	for (const Rhodochrosite::Sphere& sphere : scene.spheres) {
-		uploadSphere(sphere);
+	Ruby::ShaderProgram::upload("numberOfSpheres", (int)scene.spheres.size());
+	for (unsigned int i = 0; i < scene.spheres.size(); i++) {
+		uploadSphere(scene.spheres[i], i);
 	}
 
-	for (const Ruby::DirectionalLight& light : scene.lights) {
-		uploadLight(light);
+	Ruby::ShaderProgram::upload("numberOfLights", (int)scene.lights.size());
+	for (unsigned int i = 0; i < scene.lights.size(); i++) {
+		uploadLight(scene.lights[i], i);
 	}
 }
 
@@ -217,18 +286,36 @@ void setScene(const Rhodochrosite::SceneName newScene) {
 	switch (scene) {
 	case Rhodochrosite::SceneName::ONE_SPHERE:
 		// CPU side
-		rayTracer->setScene(oneSphereScene);
+		rayTracer->setScene(sceneCollection.oneSphere);
 
 		// GPU side
 		activeProgram->use();
-		uploadScene(oneSphereScene);
+		uploadScene(sceneCollection.oneSphere);
 		break;
-	//case Rhodochrosite::Scene::TWO_SPHERE:
-	//	
-	//	break;
-	//case Rhodochrosite::Scene::LARGE_AMOUNT_OF_SPHERES:
-	//	
-	//	break;
+	case Rhodochrosite::SceneName::TWO_SPHERE:
+		// CPU side
+		rayTracer->setScene(sceneCollection.twoSpheres);
+
+		// GPU side
+		activeProgram->use();
+		uploadScene(sceneCollection.twoSpheres);
+		break;
+	case Rhodochrosite::SceneName::LARGE_AMOUNT_OF_SPHERES:
+		// CPU side
+		rayTracer->setScene(sceneCollection.lotsOfSpheres);
+
+		// GPU side
+		activeProgram->use();
+		uploadScene(sceneCollection.lotsOfSpheres);
+		break;
+	case Rhodochrosite::SceneName::RANDOM_SPHERES:
+		// CPU side
+		rayTracer->setScene(sceneCollection.randomSpheres);
+
+		// GPU side
+		activeProgram->use();
+		uploadScene(sceneCollection.randomSpheres);
+		break;
 	}
 }
 
@@ -236,6 +323,10 @@ void setAlgorithm(Rhodochrosite::RenderingAlgorithm newAlgorithm) {
 	algorithm = newAlgorithm;
 	switch (algorithm) {
 	case Rhodochrosite::RenderingAlgorithm::BASIC_LIGHTING:
+		// CPU side
+		rayTracer->setAlgorithm(&Rhodochrosite::Renderer::basicLightingAlgorithm);
+
+		// GPU side
 		Ruby::VertexShader vert{ Ruby::TextFile{"assets\\shaders\\RayTracing.vert"} };
 		Ruby::FragmentShader frag{ Ruby::TextFile{"assets\\shaders\\RayTracing.frag"} };
 
