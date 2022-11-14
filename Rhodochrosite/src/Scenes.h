@@ -8,6 +8,7 @@ namespace Rhodochrosite {
 		Scenes();
 
 		Scene oneSphere;
+		Scene sphereOnPlane;
 		Scene twoSpheres;
 		Scene lotsOfSpheres;
 		Scene randomSpheres;
@@ -16,6 +17,7 @@ namespace Rhodochrosite {
 
 	private:
 		static Scene oneSphereInit();
+		static Scene sphereOnPlaneInit();
 		static Scene twoSpheresInit();
 		static Scene lotsOfSpheresInit();
 		static Scene randomSpheresInit();

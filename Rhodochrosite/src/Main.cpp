@@ -14,7 +14,11 @@ auto algorithm = Rhodochrosite::RenderingAlgorithm::BASIC_LIGHTING;
 void setScene(Rhodochrosite::SceneName newScene);
 void setAlgorithm(Rhodochrosite::RenderingAlgorithm newAlgorithm);
 
-std::unique_ptr<Ruby::ShaderProgram> activeProgram{ nullptr };
+Ruby::ShaderProgram* activeProgram{ nullptr };
+std::unique_ptr<Ruby::ShaderProgram> basicLighting{ nullptr };
+std::unique_ptr<Ruby::ShaderProgram> allReflective{ nullptr };
+std::unique_ptr<Ruby::ShaderProgram> allDiffuse{ nullptr };
+
 std::unique_ptr<Rhodochrosite::Renderer> rayTracer{ nullptr };
 
 Rhodochrosite::Scenes sceneCollection;
@@ -51,7 +55,6 @@ void mousePositionCallback(int xpos, int ypos, void* data) {
 	yOffset *= controller->mouseSensitivity;
 
 	if (controller->mouse != nullptr && controller->mouse->button2 && device == Rhodochrosite::RenderingDevice::GPU) {
-		LOG("Mouse Movement");
 		controller->yaw += xOffset;
 		controller->pitch += yOffset;
 
@@ -90,6 +93,23 @@ int main() {
 	// Ray tracing Setup
 	rayTracer = std::make_unique<Rhodochrosite::Renderer>( window.getWidth(), window.getHeight(), camera );
 
+	// Shader setup
+	basicLighting = std::make_unique<Ruby::ShaderProgram>(
+	Ruby::VertexShader{ Ruby::TextFile{ "assets\\shaders\\BasicLighting.vert" } },
+	Ruby::FragmentShader{ Ruby::TextFile{ "assets\\shaders\\BasicLighting.frag" } },
+	std::vector<Ruby::Attribute>{ 3, 2 }
+	);
+	allReflective = std::make_unique<Ruby::ShaderProgram>(
+		Ruby::VertexShader{ Ruby::TextFile{ "assets\\shaders\\AllReflective.vert" } },
+		Ruby::FragmentShader{ Ruby::TextFile{ "assets\\shaders\\AllReflective.frag" } },
+		std::vector<Ruby::Attribute>{ 3, 2 }
+	);
+	allDiffuse = std::make_unique<Ruby::ShaderProgram>(
+		Ruby::VertexShader{ Ruby::TextFile{ "assets\\shaders\\AllDiffuse.vert" } },
+		Ruby::FragmentShader{ Ruby::TextFile{ "assets\\shaders\\AllDiffuse.frag" } },
+		std::vector<Ruby::Attribute>{ 3, 2 }
+	);
+
 	Ruby::Texture renderTarget{ rayTracer->getImage() };
 	Ruby::ScreenQuad screenQuad{ &renderTarget };
 
@@ -125,6 +145,8 @@ int main() {
 				Ruby::ShaderProgram::upload("aspectRatio", (float)window.getHeight() / (float)window.getWidth());
 				Ruby::ShaderProgram::upload("cameraPosition", camera.position);
 				Ruby::ShaderProgram::upload("viewMatrix", camera.getViewMatrix());
+				Ruby::ShaderProgram::upload("time", time.getTime());
+				Ruby::ShaderProgram::upload("projectionMatrix", window.getProjectionMatrix());
 
 				screenQuad.render();
 				break;
@@ -160,6 +182,9 @@ int main() {
 						switch (scene) {
 						case Rhodochrosite::SceneName::ONE_SPHERE:
 							status += "Currently rendering one sphere ";
+							break;
+						case Rhodochrosite::SceneName::SPHERE_ON_PLANE:
+							status += "Currently rendering a sphere on a plane ";
 							break;
 						case Rhodochrosite::SceneName::TWO_SPHERE:
 							status += "Currently rendering two spheres ";
@@ -226,6 +251,10 @@ int main() {
 						setAlgorithm(algorithm);
 						setScene(Rhodochrosite::SceneName::ONE_SPHERE);
 					}
+					if (ImGui::Button("Sphere On Plane")) {
+						setAlgorithm(algorithm);
+						setScene(Rhodochrosite::SceneName::SPHERE_ON_PLANE);
+					}
 					if (ImGui::Button("Two Spheres")) {
 						setAlgorithm(algorithm);
 						setScene(Rhodochrosite::SceneName::TWO_SPHERE);
@@ -263,6 +292,22 @@ void uploadSphere(const Rhodochrosite::Sphere& sphere, unsigned int index) {
 	Ruby::ShaderProgram::upload("spheres[" + std::to_string(index) + "].origin", sphere.origin);
 	Ruby::ShaderProgram::upload("spheres[" + std::to_string(index) + "].radius", sphere.radius);
 	Ruby::ShaderProgram::upload("spheres[" + std::to_string(index) + "].colour", sphere.colour.colour);
+
+	unsigned int mat = 0;
+	switch (sphere.material) {
+	default:
+	case Rhodochrosite::Material::DIFFUSE:
+		mat = 0;
+		break;
+	case Rhodochrosite::Material::REFLECTION:
+		mat = 1;
+		break;
+	case Rhodochrosite::Material::REFRACTION:
+		mat = 2;
+		break;
+	}
+
+	Ruby::ShaderProgram::upload("spheres[" + std::to_string(index) + "].material", (int)mat);
 }
 
 void uploadLight(const Ruby::DirectionalLight& light, unsigned int index) {
@@ -291,6 +336,14 @@ void setScene(const Rhodochrosite::SceneName newScene) {
 		// GPU side
 		activeProgram->use();
 		uploadScene(sceneCollection.oneSphere);
+		break;
+	case Rhodochrosite::SceneName::SPHERE_ON_PLANE:
+		// CPU side
+		rayTracer->setScene(sceneCollection.sphereOnPlane);
+
+		// GPU side
+		activeProgram->use();
+		uploadScene(sceneCollection.sphereOnPlane);
 		break;
 	case Rhodochrosite::SceneName::TWO_SPHERE:
 		// CPU side
@@ -321,22 +374,35 @@ void setScene(const Rhodochrosite::SceneName newScene) {
 
 void setAlgorithm(Rhodochrosite::RenderingAlgorithm newAlgorithm) {
 	algorithm = newAlgorithm;
+	Ruby::Colour(Rhodochrosite::Renderer::* cpuAlg)(const Malachite::Vector2f & texCords) const;
+	std::string vertPath = "";
+	std::string fragPath = "";
+
 	switch (algorithm) {
 	case Rhodochrosite::RenderingAlgorithm::BASIC_LIGHTING:
 		// CPU side
-		rayTracer->setAlgorithm(&Rhodochrosite::Renderer::basicLightingAlgorithm);
+		cpuAlg = &Rhodochrosite::Renderer::basicLightingAlgorithm;
 
 		// GPU side
-		Ruby::VertexShader vert{ Ruby::TextFile{"assets\\shaders\\BasicLighting.vert"} };
-		Ruby::FragmentShader frag{ Ruby::TextFile{"assets\\shaders\\BasicLighting.frag"} };
+		activeProgram = basicLighting.get();
+		break;
+	case Rhodochrosite::RenderingAlgorithm::ALL_REFLECTIVE:
+		// CPU side
+		cpuAlg = &Rhodochrosite::Renderer::allReflectiveAlgorithm;
 
-		activeProgram = std::make_unique<Ruby::ShaderProgram>(vert, frag, std::vector<Ruby::Attribute>{ 3, 2 });
+		// GPU side
+		activeProgram = allReflective.get();
 		break;
-	/*case Rhodochrosite::RenderingAlgorithm::ALL_REFLECTIVE:
-		break;
-	case Rhodochrosite::RenderingAlgorithm::RANDOM_MATERIALS:
-		break;
-	case Rhodochrosite::RenderingAlgorithm::ALL_DIFFUSE:
+		/*case Rhodochrosite::RenderingAlgorithm::RANDOM_MATERIALS:
 		break;*/
+	case Rhodochrosite::RenderingAlgorithm::ALL_DIFFUSE:
+		// CPU side
+		cpuAlg = &Rhodochrosite::Renderer::allDiffuseAlgorithm;
+
+		// GPU side
+		activeProgram = allDiffuse.get();
+		break;
 	}
+	rayTracer->setAlgorithm(cpuAlg);
+	setScene(scene);
 }

@@ -21,6 +21,7 @@ namespace Rhodochrosite {
 
 	enum class SceneName {
 		ONE_SPHERE,
+		SPHERE_ON_PLANE,
 		TWO_SPHERE,
 		LARGE_AMOUNT_OF_SPHERES,
 		RANDOM_SPHERES
@@ -37,6 +38,8 @@ namespace Rhodochrosite {
 		void setAlgorithm(Ruby::Colour(Renderer::* algorithm)(const Malachite::Vector2f& texCords) const);
 
 		[[nodiscard]] Ruby::Colour basicLightingAlgorithm(const Malachite::Vector2f& texCords) const;
+		[[nodiscard]] Ruby::Colour allReflectiveAlgorithm(const Malachite::Vector2f& texCords) const;
+		[[nodiscard]] Ruby::Colour allDiffuseAlgorithm(const Malachite::Vector2f& texCords) const;
 
 	private:
 
