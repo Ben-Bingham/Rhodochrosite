@@ -157,9 +157,10 @@ int main() {
 				activeProgram->use();
 				Ruby::ShaderProgram::upload("aspectRatio", (float)window.getHeight() / (float)window.getWidth());
 				Ruby::ShaderProgram::upload("cameraPosition", camera.position);
-				Ruby::ShaderProgram::upload("viewMatrix", camera.getViewMatrix());
+				Ruby::ShaderProgram::upload("cameraDirection", camera.front.normalize());
+				Ruby::ShaderProgram::upload("pixelWidth", (int)rayTracer->getImage().getWidth());
+				Ruby::ShaderProgram::upload("pixelHeight", (int)rayTracer->getImage().getHeight());
 				Ruby::ShaderProgram::upload("time", time.getTime());
-				Ruby::ShaderProgram::upload("projectionMatrix", window.getProjectionMatrix());
 
 				screenQuad.render();
 				break;

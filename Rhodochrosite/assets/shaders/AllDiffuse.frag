@@ -27,8 +27,7 @@ struct Hit {
 
 // Uniforms
 uniform vec3 cameraPosition;
-uniform mat4 viewMatrix;
-uniform mat4 projectionMatrix;
+uniform vec3 cameraDirection;
 
 uniform Sphere spheres[32];
 uniform int numberOfSpheres;
@@ -37,6 +36,8 @@ uniform DirectionalLight dirLights[8];
 uniform int numberOfLights;
 
 uniform float aspectRatio;
+uniform int pixelWidth;
+uniform int pixelHeight;
 
 uniform float time;
 
@@ -116,27 +117,50 @@ Hit hitSphere(Ray ray) {
 vec4 backgroundColour = vec4(0.6, 0.7, 0.9, 1.0);
 int maxNumberOfBounces = 50;
 
+float distanceToImagePlane = 1.0;
+
+Ray computeCameraRay(int i, int j) {
+	float normI = (i / pixelWidth) - 0.5; // -0.5 -> 0.5
+	float normJ = (j / pixelHeight) - 0.5; // -0.5 -> 0.5
+
+	vec3 cameraRight = cross(cameraDirection, vec3(0, 1, 0));
+	vec3 cameraUp = cross(cameraDirection, cameraRight);
+
+	vec3 imagePoint = (normI * cameraRight) + (normJ * cameraUp) + (cameraDirection * distanceToImagePlane) + cameraPosition;
+	vec3 rayDirection = imagePoint - cameraPosition;
+	return Ray(cameraPosition, rayDirection);
+}
+
 void main() {
 	vec2 texCords;
 	texCords.x = textureCordinates.x * 2.0 - 1.0;
 	texCords.y = (textureCordinates.y * 2.0 - 1.0) * aspectRatio;
 
-	mat4 inverseView = inverse(viewMatrix);
-	vec4 target = /*inverse(projectionMatrix) **/ vec4(texCords.x, texCords.y, -1.0, 1.0);
-	vec3 rayDirection = vec3(inverseView * vec4(normalize(vec3(target) / target.w), 0));
+	//float normI = (texCords.x * pixelWidth / pixelWidth) - 0.5; // -0.5 -> 0.5
+	//float normJ = (texCords.y * pixelHeight / pixelHeight) - 0.5; // -0.5 -> 0.5
 
-	Ray ray = Ray( cameraPosition, rayDirection );
+	vec3 cameraRight = cross(cameraDirection, vec3(0, -1, 0));
+	vec3 cameraUp = cross(cameraDirection, cameraRight);
+
+	vec3 imagePoint = (-texCords.x * cameraRight) + (texCords.y * cameraUp) + (cameraDirection * distanceToImagePlane) + cameraPosition;
+	vec3 rayDirection = imagePoint - cameraPosition;
+	//Ray(cameraPosition, rayDirection);
+
+	Ray ray = Ray(cameraPosition, rayDirection);
+
+	//FragColor = vec4(rayDirection, 1);
+	//return;
 
 	highp vec3 hitPosition;
-	vec3 normal;
-	Hit hit;
-	vec4 colour = vec4(0);
-	highp vec3 direction;
+	//vec3 normal;
+	//Hit hit;
+	vec3 colour = vec3(0, 0, 0);
+	//highp vec3 direction;
 	float multiplier = 1.0;
 	//int numberOfBounces;
 
 	for (int i = 0; i < maxNumberOfBounces; i++) {
-		hit = hitSphere(ray);
+		Hit hit = hitSphere(ray);
 
 		if (hit.hitSomething == false) { // Miss
 			colour += backgroundColour * multiplier;
@@ -146,15 +170,14 @@ void main() {
 		// Hit
 		vec3 hitLocation = ray.origin + ray.direction * hit.distanceToHit;
 
-		normal = hitLocation - hit.hitSphere.origin;
-		normal = normalize(normal);
+		vec3 normal = normalize(hitLocation - hit.hitSphere.origin);
 
 		float lightIntensity = 0.0;
 		for (int i = 0; i < numberOfLights; i++) {
 			lightIntensity += max(dot(normal, -dirLights[i].direction), 0.0);
 		}
 
-		colour += hit.hitSphere.colour * multiplier * lightIntensity;
+		colour += hit.hitSphere.colour.xyz * multiplier * lightIntensity;
 		multiplier *= 0.5;
 
 		ray = Ray(hitLocation + (normal * 0.001), reflect(ray.direction, normal + normalize(randomVec3InUnitSphere(fract(time)))));
@@ -228,7 +251,7 @@ void main() {
 		
 	}
 	//colour /= numberOfBounces;
-	FragColor = vec4(colour.xyz, 1);
+	FragColor = vec4(colour, 1);
 
 	//FragColor = vec4(0, 0, 1, 1);
 	//return;
