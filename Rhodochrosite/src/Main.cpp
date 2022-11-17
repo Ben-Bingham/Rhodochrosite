@@ -7,6 +7,7 @@
 
 #include "Rendering/Renderer.h"
 #include "Renderable Objects/ScreenQuad/ScreenQuad.h"
+#include <wtypes.h>
 
 auto scene = Rhodochrosite::SceneName::ONE_SPHERE;
 auto device = Rhodochrosite::RenderingDevice::CPU;
@@ -73,6 +74,18 @@ void mousePositionCallback(int xpos, int ypos, void* data) {
 	}
 }
 
+// Switch to most powerfull GPU
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+	__declspec(dllexport) DWORD NvOptimusEnablement = 1;
+	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+
+#ifdef __cplusplus
+}
+#endif
+
 int main() {
 	// Quad Rendering Setup
 	Wavellite::Window window{Wavellite::Window::WindowSize::HALF_SCREEN, "Rhodochrosite"};
@@ -124,7 +137,7 @@ int main() {
 		if (keyboard->KEY_ESCAPE) {
 			window.close();
 		}
-
+		
 		{ // Ray tracing
 			renderer.prep(cam.getViewMatrix());
 

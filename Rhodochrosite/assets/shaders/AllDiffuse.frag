@@ -49,20 +49,20 @@ vec3 at(Ray ray, float t) {
 
 float PHI = 1.61803398874989484820459;  // Golden Ratio   
 
-float randomFloat(float seed = 3.14) {
+float randomFloat(float seed) {
 	vec2 coord = vec2(textureCordinates.x * 1000, textureCordinates.y * 1000 * aspectRatio);
     return fract(tan(distance(coord * PHI, coord) * seed) * coord.x); // 3.14 is seed
 }
 
-float randomRange(float minVal, float maxVal, float seed = 3.14) { // [min, max[
+float randomRange(float minVal, float maxVal, float seed) { // [min, max[
 	return minVal + (maxVal - minVal) * randomFloat(seed);
 }
 
-vec3 randomVec3(float seed = 3.14) {
+vec3 randomVec3(float seed) {
 	return vec3(randomFloat(seed), randomFloat(seed), randomFloat(seed));
 }
 
-vec3 randomVec3InRange(float minVal, float maxVal, float seed = 3.14) {
+vec3 randomVec3InRange(float minVal, float maxVal, float seed) {
 	return vec3(randomRange(minVal, maxVal, seed), randomRange(minVal, maxVal, seed), randomRange(minVal, maxVal, seed));
 }
 
@@ -70,7 +70,7 @@ float lengthSquared(vec3 vector) {
 	return vector.x * vector.x + vector.y * vector.y + vector.z * vector.z;
 }
 
-vec3 randomVec3InUnitSphere(float seed = 3.14) {
+vec3 randomVec3InUnitSphere(float seed) {
 	int i = 0;
 	while (true) {
 		i++;
@@ -114,7 +114,7 @@ Hit hitSphere(Ray ray) {
 }
 
 vec4 backgroundColour = vec4(0.6, 0.7, 0.9, 1.0);
-int maxNumberOfBounces = 100;
+int maxNumberOfBounces = 50;
 
 void main() {
 	vec2 texCords;
@@ -157,8 +157,7 @@ void main() {
 		colour += hit.hitSphere.colour * multiplier * lightIntensity;
 		multiplier *= 0.5;
 
-
-		ray = Ray(hitLocation, reflect(ray.direction, normal + randomVec3InUnitSphere(fract(time))));
+		ray = Ray(hitLocation + (normal * 0.001), reflect(ray.direction, normal + normalize(randomVec3InUnitSphere(fract(time)))));
 
 		//hit = hitSphere(ray);
 		//
