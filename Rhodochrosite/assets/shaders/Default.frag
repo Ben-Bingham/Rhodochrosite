@@ -118,6 +118,10 @@ Ray scatterRayReflective(Ray incidentRay, Hit hit, vec3 hitLocation, vec3 normal
 	return Ray(hitLocation, reflect(incidentRay.direction, normal));
 }
 
+Ray scatterRayDiffuse(Ray incidentRay, Hit hit, vec3 hitLocation, vec3 normal, float randSeed) {
+	return Ray(hitLocation, reflect(incidentRay.direction, normal + randomVec3InUnitSphere(randSeed + 3.0)));
+}
+
 vec3 backgroundColour = vec3(0.6, 0.7, 0.9);
 int maxNumberOfBounces = 50;
 int numberOfSamples = 4;
@@ -166,7 +170,16 @@ void main() {
 			tempColour += hit.hitSphere.colour.xyz * multiplier * lightIntensity;
 			multiplier *= 0.5;
 
-			ray = scatterRayReflective(ray, hit, hitLocation, normal);
+			if (hit.hitSphere.material == 0) {
+				ray = scatterRayDiffuse(ray, hit, hitLocation, normal, cos(randSeed + i + 4234.634553));
+			}
+			else if (hit.hitSphere.material == 1) {
+				ray = scatterRayReflective(ray, hit, hitLocation, normal);
+			}
+			else { //TODO refraction
+				ray = scatterRayReflective(ray, hit, hitLocation, normal);
+			}
+
 		}
 		colour += tempColour;
 	}

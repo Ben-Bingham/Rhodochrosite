@@ -44,7 +44,6 @@ namespace Rhodochrosite {
 		scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{-1.0f, 0.75f, -11.0f}, 1.75f, Ruby::Colour{114, 158, 101}, Material::REFRACTION });
 		scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{2.25f, 1.5f, -6.5f}, 0.5f, Ruby::Colour{114, 112, 130}, Material::DIFFUSE });
 		scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{4.0f, 0.0f, -8.0f}, 1.75f, Ruby::Colour{26, 3, 24}, Material::REFLECTION });
-		scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{-3.0f, 2.5f, -7.0f}, 1.0f, Ruby::Colour{181, 101, 112}, Material::REFRACTION });
 		scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{1.0f, 2.5f, -4.0f}, 0.75f, Ruby::Colour{43, 32, 34}, Material::DIFFUSE });
 		scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{-3.0f, 3.0f, -7.0f}, 1.5f, Ruby::Colour{56, 15, 92}, Material::REFLECTION });
 		scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{3.5f, 0.5f, -12.0f}, 1.0f, Ruby::Colour{133, 105, 224}, Material::REFRACTION });

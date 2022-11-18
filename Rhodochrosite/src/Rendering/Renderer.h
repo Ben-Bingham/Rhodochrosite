@@ -40,6 +40,7 @@ namespace Rhodochrosite {
 		[[nodiscard]] Ruby::Colour basicLightingAlgorithm(const Malachite::Vector2f& texCords) const;
 		[[nodiscard]] Ruby::Colour allReflectiveAlgorithm(const Malachite::Vector2f& texCords) const;
 		[[nodiscard]] Ruby::Colour allDiffuseAlgorithm(const Malachite::Vector2f& texCords) const;
+		[[nodiscard]] Ruby::Colour randomMaterialsAlgorithm(const Malachite::Vector2f& texCords) const;
 
 	private:
 

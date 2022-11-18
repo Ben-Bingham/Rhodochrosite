@@ -19,6 +19,7 @@ Ruby::ShaderProgram* activeProgram{ nullptr };
 std::unique_ptr<Ruby::ShaderProgram> basicLighting{ nullptr };
 std::unique_ptr<Ruby::ShaderProgram> allReflective{ nullptr };
 std::unique_ptr<Ruby::ShaderProgram> allDiffuse{ nullptr };
+std::unique_ptr<Ruby::ShaderProgram> randomMaterials{ nullptr };
 
 std::unique_ptr<Rhodochrosite::Renderer> rayTracer{ nullptr };
 
@@ -120,6 +121,11 @@ int main() {
 	allDiffuse = std::make_unique<Ruby::ShaderProgram>(
 		Ruby::VertexShader{ Ruby::TextFile{ "assets\\shaders\\AllDiffuse.vert" } },
 		Ruby::FragmentShader{ Ruby::TextFile{ "assets\\shaders\\AllDiffuse.frag" } },
+		std::vector<Ruby::Attribute>{ 3, 2 }
+	);
+	randomMaterials = std::make_unique<Ruby::ShaderProgram>(
+		Ruby::VertexShader{ Ruby::TextFile{ "assets\\shaders\\Default.vert" } },
+		Ruby::FragmentShader{ Ruby::TextFile{ "assets\\shaders\\Default.frag" } },
 		std::vector<Ruby::Attribute>{ 3, 2 }
 	);
 
@@ -415,6 +421,13 @@ void setAlgorithm(Rhodochrosite::RenderingAlgorithm newAlgorithm) {
 
 		// GPU side
 		activeProgram = allDiffuse.get();
+		break;
+	case Rhodochrosite::RenderingAlgorithm::RANDOM_MATERIALS:
+		// CPU side
+		cpuAlg = &Rhodochrosite::Renderer::randomMaterialsAlgorithm;
+
+		// GPU side
+		activeProgram = randomMaterials.get();
 		break;
 	}
 	rayTracer->setAlgorithm(cpuAlg);
