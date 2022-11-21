@@ -41,6 +41,8 @@ uniform int pixelHeight;
 
 uniform float time;
 
+uniform float temp;
+
 #define FLT_MAX 3.402823466e+38
 
 // Functions
@@ -53,6 +55,8 @@ float PHI = 1.61803398874989484820459;  // Golden Ratio
 float randomFloat(float seed) {
 	vec2 coord = vec2(textureCordinates.x * 1000, textureCordinates.y * 1000 * aspectRatio);
     return fract(tan(distance(coord * PHI, coord) * tan(seed)) * coord.x);
+	//return cos(temp + seed + textureCordinates.x * textureCordinates.y);
+//	return temp;
 }
 
 float randomRange(float minVal, float maxVal, float seed) { // [min, max[
@@ -121,7 +125,7 @@ Hit hitSphere(Ray ray) {
 
 Ray scatterRayDiffuse(Ray incidentRay, Hit hit, vec3 hitLocation, vec3 normal, float randSeed) {
 	//return Ray(hitLocation, reflect(incidentRay.direction, normal + randomVec3InUnitSphere(randSeed + 2.0)));
-	vec3 scatterDirection = normalize(normal + randomVec3InUnitSphere(randSeed + 2.0));
+	vec3 scatterDirection = normalize(normal + randomVec3InRange(-0.5, 0.5, randSeed));
 	if (nearZero(scatterDirection)) {
 		scatterDirection = normal;
 	}
@@ -129,12 +133,13 @@ Ray scatterRayDiffuse(Ray incidentRay, Hit hit, vec3 hitLocation, vec3 normal, f
 }
 
 vec3 backgroundColour = vec3(0.6, 0.7, 0.9);
-int maxNumberOfBounces = 500;
+int maxNumberOfBounces = 10;
 int numberOfSamples = 1;
 float distanceToImagePlane = 1.0;
 
 void main() {
 	highp float randSeed = (time / time - time - time * time + time) / time;
+	//highp float randSeed = temp;
 
 	vec3 colour = vec3(0, 0, 0);
 	for (int i = 0; i < numberOfSamples; i++) {
@@ -175,9 +180,11 @@ void main() {
 			lightIntensity = clamp(lightIntensity, 0.0, 1.0);
 
 			tempColour += hit.hitSphere.colour.xyz * multiplier * lightIntensity;
+			//tempColour = (ray.direction + 1.0) / 2.0;
 			multiplier *= 0.5;
 
-			ray = scatterRayDiffuse(ray, hit, hitLocation, normal, cos(randSeed + j + 4234.634553));
+			ray = scatterRayDiffuse(ray, hit, hitLocation, normal, cos(randSeed + 42987423.238479234));
+			//tempColour = ray.direction;
 		}
 		//colour = vec3(0);
 		//if (j > 10) {

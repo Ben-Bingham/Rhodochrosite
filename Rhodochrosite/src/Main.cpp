@@ -140,6 +140,7 @@ int main() {
 	setScene(Rhodochrosite::SceneName::ONE_SPHERE);
 
 	renderer.init(window.getProjectionMatrix());
+	float temp = 0.5f;
 
 	while (window.isOpen()) {
 		if (keyboard->KEY_ESCAPE) {
@@ -172,6 +173,7 @@ int main() {
 				Ruby::ShaderProgram::upload("pixelWidth", (int)rayTracer->getImage().getWidth());
 				Ruby::ShaderProgram::upload("pixelHeight", (int)rayTracer->getImage().getHeight());
 				Ruby::ShaderProgram::upload("time", time.getTime());
+				Ruby::ShaderProgram::upload("temp", temp);
 
 				screenQuad.render();
 				break;
@@ -307,6 +309,8 @@ int main() {
 
 					ImGui::Text("Frame Time: ");
 					ImGui::Text((std::to_string(time.deltaTime * 1000.0f) + "miliseconds").c_str());
+
+					ImGui::SliderFloat("Temp", &temp, -1.0f, 1.0f);
 
 					ImGui::End();
 				}
