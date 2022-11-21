@@ -81,6 +81,11 @@ vec3 randomVec3InUnitSphere(float seed) {
 	}
 }
 
+bool nearZero(vec3 vector) {
+	float scaler = 1 * pow(10, -8);
+	return (abs(vector.x) < scaler) && (abs(vector.y) < scaler) && (abs(vector.z) < scaler);
+}
+
 Hit hitSphere(Ray ray) {
 	Hit sphereHit;
 	sphereHit.hitSomething = false;
@@ -115,12 +120,17 @@ Hit hitSphere(Ray ray) {
 }
 
 Ray scatterRayDiffuse(Ray incidentRay, Hit hit, vec3 hitLocation, vec3 normal, float randSeed) {
-	return Ray(hitLocation, reflect(incidentRay.direction, normal + randomVec3InUnitSphere(randSeed + 3.0)));
+	//return Ray(hitLocation, reflect(incidentRay.direction, normal + randomVec3InUnitSphere(randSeed + 2.0)));
+	vec3 scatterDirection = normalize(normal + randomVec3InUnitSphere(randSeed + 2.0));
+	if (nearZero(scatterDirection)) {
+		scatterDirection = normal;
+	}
+	return Ray(hitLocation, scatterDirection);
 }
 
 vec3 backgroundColour = vec3(0.6, 0.7, 0.9);
-int maxNumberOfBounces = 50;
-int numberOfSamples = 4;
+int maxNumberOfBounces = 500;
+int numberOfSamples = 1;
 float distanceToImagePlane = 1.0;
 
 void main() {
@@ -145,7 +155,8 @@ void main() {
 
 		vec3 tempColour = vec3(0);
 		float multiplier = 1.0;
-		for (int i = 0; i < maxNumberOfBounces; i++) {
+		int j = 0;
+		for (; j < maxNumberOfBounces; j++) {
 			Hit hit = hitSphere(ray);
 
 			if (hit.hitSomething == false) { // Miss
@@ -157,8 +168,8 @@ void main() {
 			vec3 normal = normalize(hitLocation - hit.hitSphere.origin);
 
 			float lightIntensity = 0.0;
-			for (int i = 0; i < numberOfLights; i++) {
-				lightIntensity += max(dot(normal, -dirLights[i].direction), 0.0);
+			for (int k = 0; k < numberOfLights; k++) {
+				lightIntensity += max(dot(normal, -dirLights[k].direction), 0.0);
 			}
 			
 			lightIntensity = clamp(lightIntensity, 0.0, 1.0);
@@ -166,8 +177,22 @@ void main() {
 			tempColour += hit.hitSphere.colour.xyz * multiplier * lightIntensity;
 			multiplier *= 0.5;
 
-			ray = scatterRayDiffuse(ray, hit, hitLocation, normal, cos(randSeed + i + 4234.634553));
+			ray = scatterRayDiffuse(ray, hit, hitLocation, normal, cos(randSeed + j + 4234.634553));
 		}
+		//colour = vec3(0);
+		//if (j > 10) {
+		//	colour = vec3(1, 0, 0);
+		//}
+		//if (j == 2) {
+		//	colour = vec3(0, 1, 0);
+		//}
+		//if (j == 3) {
+		//	colour = vec3(0, 0, 1);
+		//}
+		//if (j == 4) {
+		//	colour = vec3(1, 1, 1);
+		//}
+		//colour = vec3(j);
 		colour += tempColour;
 	}
 

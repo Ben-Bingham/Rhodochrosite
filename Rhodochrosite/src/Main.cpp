@@ -87,6 +87,8 @@ extern "C" {
 }
 #endif
 
+bool sceneRendered = false;
+
 int main() {
 	// Quad Rendering Setup
 	Wavellite::Window window{Wavellite::Window::WindowSize::HALF_SCREEN, "Rhodochrosite"};
@@ -149,8 +151,11 @@ int main() {
 
 			switch (device) {
 			case Rhodochrosite::RenderingDevice::CPU:
-				rayTracer->render();
-				renderTarget.updateData();
+				if (!sceneRendered) {
+					rayTracer->render();
+					renderTarget.updateData();
+					sceneRendered = true;
+				}
 
 				renderer.screenQuadRenderingPrep();
 
@@ -247,46 +252,57 @@ int main() {
 					ImGui::Text("Rendering Device:");
 					if (ImGui::Button("CPU Rendering")) {
 						device = Rhodochrosite::RenderingDevice::CPU;
+						sceneRendered = false;
 					}
 					if (ImGui::Button("GPU Rendering")) {
 						device = Rhodochrosite::RenderingDevice::GPU;
+						sceneRendered = false;
 					}
 
 					ImGui::Text("Rendering Algorithm");
 					if (ImGui::Button("Basic Lighting")) {
 						setAlgorithm(Rhodochrosite::RenderingAlgorithm::BASIC_LIGHTING);
+						sceneRendered = false;
 					}
 					if (ImGui::Button("Diffuse")) {
 						setAlgorithm(Rhodochrosite::RenderingAlgorithm::ALL_DIFFUSE);
+						sceneRendered = false;
 					}
 					if (ImGui::Button("Reflective")) {
 						setAlgorithm(Rhodochrosite::RenderingAlgorithm::ALL_REFLECTIVE);
+						sceneRendered = false;
 					}
 					if (ImGui::Button("Random Materials")) {
 						setAlgorithm(Rhodochrosite::RenderingAlgorithm::RANDOM_MATERIALS);
+						sceneRendered = false;
 					}
 
 					ImGui::Text("Scene:");
 					if (ImGui::Button("One Sphere")) {
 						setAlgorithm(algorithm);
 						setScene(Rhodochrosite::SceneName::ONE_SPHERE);
+						sceneRendered = false;
 					}
 					if (ImGui::Button("Sphere On Plane")) {
 						setAlgorithm(algorithm);
 						setScene(Rhodochrosite::SceneName::SPHERE_ON_PLANE);
+						sceneRendered = false;
 					}
 					if (ImGui::Button("Two Spheres")) {
 						setAlgorithm(algorithm);
 						setScene(Rhodochrosite::SceneName::TWO_SPHERE);
+						sceneRendered = false;
 					}
 					if (ImGui::Button("Lots of Spheres")) {
 						setAlgorithm(algorithm);
 						setScene(Rhodochrosite::SceneName::LARGE_AMOUNT_OF_SPHERES);
+						sceneRendered = false;
 					}
 					if (ImGui::Button("Random Spheres")) {
 						setAlgorithm(algorithm);
 						sceneCollection.regenerateRandomSpheres();
 						setScene(Rhodochrosite::SceneName::RANDOM_SPHERES);
+						sceneRendered = false;
 					}
 
 					ImGui::Text("Frame Time: ");

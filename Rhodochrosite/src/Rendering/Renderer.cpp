@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "Random.h"
 #include "Ray.h"
 #include "Utility.h"
 
@@ -43,11 +44,8 @@ namespace Rhodochrosite {
 
 	constexpr float infinity = std::numeric_limits<float>::max();
 
-	[[nodiscard]] Ruby::Colour Renderer::basicLightingAlgorithm(const Malachite::Vector2f& texCords) const {
-		const Ray ray{ Malachite::Vector3f::zero, Malachite::Vector3f{texCords.x, texCords.y, -1.f} };
-
-		const Sphere* hitSphere{ nullptr };
-		float closestHit= infinity;
+	Renderer::Hit Renderer::hitSpheres(const Ray& ray) const {
+		Hit hit{};
 		for (unsigned int i = 0; i < m_Scene.spheres.size(); i++) {
 			// Discriminant calculations
 			const float a = dot(ray.direction, ray.direction);
@@ -65,30 +63,40 @@ namespace Rhodochrosite {
 				continue;
 			}
 
-			if (hitDistance < closestHit) {
-				closestHit = hitDistance;
-				hitSphere = &m_Scene.spheres[i];
+			if (hitDistance < hit.distanceToHit) {
+				hit.distanceToHit = hitDistance;
+				hit.hitSphere = &m_Scene.spheres[i];
 			}
 		}
 
-		if (hitSphere == nullptr) {
+		return hit;
+	}
+
+	[[nodiscard]] Ruby::Colour Renderer::basicLightingAlgorithm(const Malachite::Vector2f& texCords) const {
+		Ray ray{ Malachite::Vector3f::zero, Malachite::Vector3f{texCords.x, texCords.y, -1.f}.normalize() };
+
+		const Hit hit = hitSpheres(ray);
+		
+		if (hit.hitSphere == nullptr) {
+			// Miss
 			return Ruby::Colour::black;
 		}
-
-		const Malachite::Vector3f hitPosition = ray.at(closestHit);
-
+		
+		// Hit
+		const Malachite::Vector3f hitPosition = ray.at(hit.distanceToHit);
+		
 		// Lighting Calculations
-		Malachite::Vector3f normal = hitPosition - hitSphere->origin;
+		Malachite::Vector3f normal = hitPosition - hit.hitSphere->origin;
 		normal = normal.normalize();
-
+		
 		float lightIntensity{ 0.0f };
 		for (unsigned int i = 0; i < m_Scene.lights.size(); i++) {
 			lightIntensity += Malachite::max(dot(normal, -m_Scene.lights[i].direction), 0.0f);
 		}
-
+		
 		lightIntensity = Malachite::clamp(lightIntensity, 0.0f, 1.0f);
 
-		const Malachite::Vector4f sphereColour = hitSphere->colour.colour * lightIntensity;
+		const Malachite::Vector4f sphereColour = hit.hitSphere->colour.colour * lightIntensity;
 		return Ruby::Colour{sphereColour.x, sphereColour.y, sphereColour.z, 1.0f};
 	}
 
@@ -142,52 +150,42 @@ namespace Rhodochrosite {
 	}
 
 	[[nodiscard]] Ruby::Colour Renderer::allDiffuseAlgorithm(const Malachite::Vector2f& texCords) const {
-		const Ray ray{ Malachite::Vector3f::zero, Malachite::Vector3f{texCords.x, texCords.y, -1.f} };
+		Ray ray{ Malachite::Vector3f::zero, Malachite::Vector3f{texCords.x, texCords.y, -1.f}.normalize() };
+		unsigned int numberOfBounces = 10;
+		Malachite::Vector3f backgroundColour{ 0.203f, 0.596f, 0.922f };
 
-		const Sphere* hitSphere{ nullptr };
-		float closestHit = infinity;
-		for (unsigned int i = 0; i < m_Scene.spheres.size(); i++) {
-			// Discriminant calculations
-			const float a = dot(ray.direction, ray.direction);
-			const float b = 2.0f * dot(ray.origin - m_Scene.spheres[i].origin, ray.direction);
-			const float c = dot(ray.origin - m_Scene.spheres[i].origin, ray.origin - m_Scene.spheres[i].origin) - (m_Scene.spheres[i].radius * m_Scene.spheres[i].radius);
+		float multiplier = 1.0f;
+		Malachite::Vector3f colour{ 0.0f };
+		for (unsigned int i = 0; i < numberOfBounces; i++) {
+			const Hit hit = hitSpheres(ray);
 
-			const float discriminant = b * b - 4.0f * a * c;
-			if (discriminant < 0.0f) {
-				continue;
+			if (hit.hitSphere == nullptr) {
+				// Miss
+				colour += backgroundColour * multiplier;
+				break;
 			}
 
-			// Solving the quadratic formula
-			const float hitDistance = (-b - std::sqrt(discriminant)) / 2.0f * a;
-			if (hitDistance < 0.0f) {
-				continue;
+			// Hit
+			const Malachite::Vector3f hitPosition = ray.at(hit.distanceToHit);
+
+			// Lighting Calculations
+			Malachite::Vector3f normal = hitPosition - hit.hitSphere->origin;
+			normal = normal.normalize();
+
+			float lightIntensity{ 0.0f };
+			for (unsigned int i = 0; i < m_Scene.lights.size(); i++) {
+				lightIntensity += Malachite::max(dot(normal, -m_Scene.lights[i].direction), 0.0f);
 			}
 
-			if (hitDistance < closestHit) {
-				closestHit = hitDistance;
-				hitSphere = &m_Scene.spheres[i];
-			}
+			lightIntensity = Malachite::clamp(lightIntensity, 0.0f, 1.0f);
+
+			colour += hit.hitSphere->colour.toVec3() * multiplier;
+			multiplier *= 0.5f;
+
+			ray = Ray{ hitPosition + normal * 0.001f, Malachite::reflect(ray.direction, normal + Malachite::randomInUnitSphere<float>()) };
 		}
 
-		if (hitSphere == nullptr) {
-			return Ruby::Colour::black;
-		}
-
-		const Malachite::Vector3f hitPosition = ray.at(closestHit);
-
-		// Lighting Calculations
-		Malachite::Vector3f normal = hitPosition - hitSphere->origin;
-		normal = normal.normalize();
-
-		float lightIntensity{ 0.0f };
-		for (unsigned int i = 0; i < m_Scene.lights.size(); i++) {
-			lightIntensity += Malachite::max(dot(normal, -m_Scene.lights[i].direction), 0.0f);
-		}
-
-		lightIntensity = Malachite::clamp(lightIntensity, 0.0f, 1.0f);
-
-		const Malachite::Vector4f sphereColour = hitSphere->colour.colour * lightIntensity;
-		return Ruby::Colour{ sphereColour.x, sphereColour.y, sphereColour.z, 1.0f };
+		return Ruby::Colour{ colour, 1.0f };
 	}
 
 	[[nodiscard]] Ruby::Colour Renderer::randomMaterialsAlgorithm(const Malachite::Vector2f& texCords) const {

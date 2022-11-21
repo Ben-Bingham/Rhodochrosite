@@ -2,6 +2,7 @@
 
 #include "Camera.h"
 #include "Image.h"
+#include "Ray.h"
 #include "Scene.h"
 #include "Sphere.h"
 #include "Vector.h"
@@ -37,13 +38,17 @@ namespace Rhodochrosite {
 		void setScene(const Scene& scene);
 		void setAlgorithm(Ruby::Colour(Renderer::* algorithm)(const Malachite::Vector2f& texCords) const);
 
+		struct Hit {
+			const Sphere* hitSphere{ nullptr };
+			float distanceToHit{ std::numeric_limits<float>::max()};
+		};
+
 		[[nodiscard]] Ruby::Colour basicLightingAlgorithm(const Malachite::Vector2f& texCords) const;
 		[[nodiscard]] Ruby::Colour allReflectiveAlgorithm(const Malachite::Vector2f& texCords) const;
 		[[nodiscard]] Ruby::Colour allDiffuseAlgorithm(const Malachite::Vector2f& texCords) const;
 		[[nodiscard]] Ruby::Colour randomMaterialsAlgorithm(const Malachite::Vector2f& texCords) const;
 
 	private:
-
 		Ruby::Image m_RenderImage;
 		unsigned int m_Width;
 		unsigned int m_Height;
@@ -51,6 +56,8 @@ namespace Rhodochrosite {
 		Ruby::Camera& m_Camera;
 
 		Scene m_Scene;
+
+		[[nodiscard]] Hit hitSpheres(const Ray& ray) const;
 
 		Ruby::Colour(Renderer::* m_PerPixelAlgorithm)(const Malachite::Vector2f& texCords) const;
 	};

@@ -23,6 +23,7 @@ namespace Rhodochrosite {
 		Scene scene;
 		scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{0.0f, 0.0f, -2.0f}, 0.5f, Ruby::Colour::pink, Material::DIFFUSE });
 		scene.spheres.emplace_back(Sphere{ Malachite::Vector3f{0.0f, -1000.5f, 0.0f}, 1000.0f, Ruby::Colour{88, 104, 117} }); // Floor
+		scene.lights.emplace_back(Ruby::DirectionalLight{ Malachite::Vector3f{-1.0f, -1.0f, -1.0f}.normalize() });
 		return scene;
 	}
 
