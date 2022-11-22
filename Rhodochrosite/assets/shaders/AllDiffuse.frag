@@ -109,13 +109,22 @@ Hit hitSphere(Ray ray) {
 		}
 
 		// Solving the quadratic formula
-		float hitDistance = (-b - sqrt(discriminant)) / 2.0 * a;
-		if (hitDistance < 0.001) {
+		float sqrtDiscriminant = sqrt(discriminant);
+		float solution1 = (-b - sqrtDiscriminant) / 2.0 * a;
+		float solution2 = (-b + sqrtDiscriminant) / 2.0 * a;
+		float solution;
+		if (solution1 < solution2) {
+			solution = solution1;
+		}
+		else {
+			solution = solution2;
+		}
+		if (solution < 0.0) {
 			continue;
 		}
 
-		if (hitDistance < sphereHit.distanceToHit) {
-			sphereHit.distanceToHit = hitDistance;
+		if (solution < sphereHit.distanceToHit) {
+			sphereHit.distanceToHit = solution;
 			sphereHit.hitSphere = spheres[i];
 			sphereHit.hitSomething = true;
 		}
@@ -125,11 +134,20 @@ Hit hitSphere(Ray ray) {
 
 Ray scatterRayDiffuse(Ray incidentRay, Hit hit, vec3 hitLocation, vec3 normal, float randSeed) {
 	//return Ray(hitLocation, reflect(incidentRay.direction, normal + randomVec3InUnitSphere(randSeed + 2.0)));
-	vec3 scatterDirection = normalize(normal + randomVec3InRange(-0.5, 0.5, randSeed));
-	if (nearZero(scatterDirection)) {
-		scatterDirection = normal;
-	}
-	return Ray(hitLocation, scatterDirection);
+	//vec3 scatterDirection = normal;
+	vec3 scatterDirection = normal + temp * randomVec3InUnitSphere(randSeed);
+	//scatterDirection = normal + (randomVec3InUnitSphere(randSeed) * temp);
+	//scatterDirection = normal + (randomVec3InUnitSphere(randSeed) * temp);
+	//if (temp > 0) {
+	//	scatterDirection = normalize((normal) + normalize(randomVec3InUnitSphere(randSeed)));
+	//}
+	//else {
+	//	
+	//}
+	//if (nearZero(scatterDirection)) {
+	//	scatterDirection = normal;
+	//}
+	return Ray(hitLocation + (normal * 0.00001), scatterDirection);
 }
 
 vec3 backgroundColour = vec3(0.6, 0.7, 0.9);
@@ -145,6 +163,10 @@ void main() {
 	for (int i = 0; i < numberOfSamples; i++) {
 		float randX = randomRange(0, 1 / pixelWidth, randSeed + i);
 		float randY = randomRange(0, 1 / pixelHeight, randSeed + i);
+
+		colour = vec3(randX * pixelWidth, randY * pixelHeight, 0); // THIS IS WRONT SHOULD BE VISIBLE ON SCREEN TODO
+		FragColor = vec4(colour, 1.0);
+		return;
 
 		vec2 texCords;
 		texCords.x = (textureCordinates.x + randX) * 2.0 - 1.0;
@@ -168,9 +190,13 @@ void main() {
 				tempColour += backgroundColour * multiplier;
 				break;
 			}
+			
+			vec3 origin = ray.origin - hit.hitSphere.origin;
+			vec3 hitLocation = origin + ray.direction * hit.distanceToHit;
+			//vec3 normal = normalize(hitLocation - hit.hitSphere.origin);
+			vec3 normal = normalize(hitLocation);
 
-			vec3 hitLocation = ray.origin + ray.direction * hit.distanceToHit;
-			vec3 normal = normalize(hitLocation - hit.hitSphere.origin);
+			hitLocation += hit.hitSphere.origin;
 
 			float lightIntensity = 0.0;
 			for (int k = 0; k < numberOfLights; k++) {
@@ -183,23 +209,9 @@ void main() {
 			//tempColour = (ray.direction + 1.0) / 2.0;
 			multiplier *= 0.5;
 
-			ray = scatterRayDiffuse(ray, hit, hitLocation, normal, cos(randSeed + 42987423.238479234));
+			ray = scatterRayDiffuse(ray, hit, hitLocation, normal, cos(randSeed + sin(1234.5678)));
 			//tempColour = ray.direction;
 		}
-		//colour = vec3(0);
-		//if (j > 10) {
-		//	colour = vec3(1, 0, 0);
-		//}
-		//if (j == 2) {
-		//	colour = vec3(0, 1, 0);
-		//}
-		//if (j == 3) {
-		//	colour = vec3(0, 0, 1);
-		//}
-		//if (j == 4) {
-		//	colour = vec3(1, 1, 1);
-		//}
-		//colour = vec3(j);
 		colour += tempColour;
 	}
 
