@@ -6,8 +6,12 @@
 #include "Scenes.h"
 
 #include "Rendering/Renderer.h"
-#include "Renderable Objects/ScreenQuad/ScreenQuad.h"
 #include <wtypes.h>
+
+#include "Materials/ScreenMaterial.h"
+#include "Geometry/PlaneGeometryData.h"
+
+#include "Rendering/Materials/RayTracingMaterial.h"
 
 auto scene = Rhodochrosite::SceneName::ONE_SPHERE;
 auto device = Rhodochrosite::RenderingDevice::CPU;
@@ -15,11 +19,16 @@ auto algorithm = Rhodochrosite::RenderingAlgorithm::BASIC_LIGHTING;
 void setScene(Rhodochrosite::SceneName newScene);
 void setAlgorithm(Rhodochrosite::RenderingAlgorithm newAlgorithm);
 
-Ruby::ShaderProgram* activeProgram{ nullptr };
 std::unique_ptr<Ruby::ShaderProgram> basicLighting{ nullptr };
 std::unique_ptr<Ruby::ShaderProgram> allReflective{ nullptr };
 std::unique_ptr<Ruby::ShaderProgram> allDiffuse{ nullptr };
 std::unique_ptr<Ruby::ShaderProgram> randomMaterials{ nullptr };
+
+Rhodochrosite::RayTracingMaterial* activeMaterial{ nullptr };
+std::unique_ptr<Rhodochrosite::RayTracingMaterial> basicLightingMaterial{ nullptr };
+std::unique_ptr<Rhodochrosite::RayTracingMaterial> allReflectiveMaterial{ nullptr };
+std::unique_ptr<Rhodochrosite::RayTracingMaterial> allDiffuseMaterial{ nullptr };
+std::unique_ptr<Rhodochrosite::RayTracingMaterial> randomMaterialsMaterial{ nullptr };
 
 std::unique_ptr<Rhodochrosite::Renderer> rayTracer{ nullptr };
 
@@ -75,7 +84,7 @@ void mousePositionCallback(int xpos, int ypos, void* data) {
 	}
 }
 
-// Switch to most powerfull GPU
+// Switch to most powerful GPU
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -93,14 +102,14 @@ int main() {
 	// Quad Rendering Setup
 	Wavellite::Window window{Wavellite::Window::WindowSize::HALF_SCREEN, "Rhodochrosite"};
 	window.setSwapInterval(0);
-	Wavellite::Keyboard* const keyboard = window.ioManger.getKeyboard();
-	Wavellite::Mouse* const mouse = window.ioManger.getMouse();
-	fpsController.mouse = mouse;
+	Wavellite::Keyboard& keyboard = window.ioManger.getKeyboard();
+	Wavellite::Mouse& mouse = window.ioManger.getMouse();
+	fpsController.mouse = &mouse;
 
-	mouse->addMousePositionCallback(mousePositionCallback, (void*)&fpsController);
+	mouse.addMousePositionCallback(mousePositionCallback, (void*)&fpsController);
 
-	Ruby::Renderer renderer{};
 	Ruby::Camera cam{};
+	Ruby::Renderer renderer{ cam, window };
 	Wavellite::Time time{};
 
 	// Scene Setup
@@ -111,45 +120,96 @@ int main() {
 
 	// Shader setup
 	basicLighting = std::make_unique<Ruby::ShaderProgram>(
-	Ruby::VertexShader{ Ruby::TextFile{ "assets\\shaders\\BasicLighting.vert" } },
-	Ruby::FragmentShader{ Ruby::TextFile{ "assets\\shaders\\BasicLighting.frag" } },
-	std::vector<Ruby::Attribute>{ 3, 2 }
+		Ruby::VertexShader{
+			Ruby::TextFile{ "assets\\shaders\\BasicLighting.vert"},
+			Ruby::VertexShader::LayoutData{
+				Ruby::VertexShader::LayoutDataElement{
+					Ruby::VertexShader::LayoutDataElement::DataType::VECTOR_3F,
+					Ruby::VertexShader::LayoutDataElement::DataName::POSITION
+				},
+				Ruby::VertexShader::LayoutDataElement{
+					Ruby::VertexShader::LayoutDataElement::DataType::VECTOR_2F,
+					Ruby::VertexShader::LayoutDataElement::DataName::TEXTURE_COORDINATES
+				}
+			}
+		},
+		Ruby::FragmentShader{ Ruby::TextFile{ "assets\\shaders\\BasicLighting.frag" } }
 	);
 	allReflective = std::make_unique<Ruby::ShaderProgram>(
-		Ruby::VertexShader{ Ruby::TextFile{ "assets\\shaders\\AllReflective.vert" } },
-		Ruby::FragmentShader{ Ruby::TextFile{ "assets\\shaders\\AllReflective.frag" } },
-		std::vector<Ruby::Attribute>{ 3, 2 }
+		Ruby::VertexShader{
+			Ruby::TextFile{ "assets\\shaders\\AllReflective.vert" },
+			Ruby::VertexShader::LayoutData{
+				Ruby::VertexShader::LayoutDataElement{
+					Ruby::VertexShader::LayoutDataElement::DataType::VECTOR_3F,
+					Ruby::VertexShader::LayoutDataElement::DataName::POSITION
+				},
+				Ruby::VertexShader::LayoutDataElement{
+					Ruby::VertexShader::LayoutDataElement::DataType::VECTOR_2F,
+					Ruby::VertexShader::LayoutDataElement::DataName::TEXTURE_COORDINATES
+				}
+			}
+		},
+		Ruby::FragmentShader{ Ruby::TextFile{ "assets\\shaders\\AllReflective.frag" } }
 	);
 	allDiffuse = std::make_unique<Ruby::ShaderProgram>(
-		Ruby::VertexShader{ Ruby::TextFile{ "assets\\shaders\\AllDiffuse.vert" } },
-		Ruby::FragmentShader{ Ruby::TextFile{ "assets\\shaders\\AllDiffuse.frag" } },
-		std::vector<Ruby::Attribute>{ 3, 2 }
+		Ruby::VertexShader{
+			Ruby::TextFile{ "assets\\shaders\\AllDiffuse.vert" },
+			Ruby::VertexShader::LayoutData{
+				Ruby::VertexShader::LayoutDataElement{
+					Ruby::VertexShader::LayoutDataElement::DataType::VECTOR_3F,
+					Ruby::VertexShader::LayoutDataElement::DataName::POSITION
+				},
+				Ruby::VertexShader::LayoutDataElement{
+					Ruby::VertexShader::LayoutDataElement::DataType::VECTOR_2F,
+					Ruby::VertexShader::LayoutDataElement::DataName::TEXTURE_COORDINATES
+				}
+			}
+		},
+		Ruby::FragmentShader{ Ruby::TextFile{ "assets\\shaders\\AllDiffuse.frag" } }
 	);
 	randomMaterials = std::make_unique<Ruby::ShaderProgram>(
-		Ruby::VertexShader{ Ruby::TextFile{ "assets\\shaders\\Default.vert" } },
-		Ruby::FragmentShader{ Ruby::TextFile{ "assets\\shaders\\Default.frag" } },
-		std::vector<Ruby::Attribute>{ 3, 2 }
+		Ruby::VertexShader{
+			Ruby::TextFile{ "assets\\shaders\\Default.vert" },
+			Ruby::VertexShader::LayoutData{
+				Ruby::VertexShader::LayoutDataElement{
+					Ruby::VertexShader::LayoutDataElement::DataType::VECTOR_3F,
+					Ruby::VertexShader::LayoutDataElement::DataName::POSITION
+				},
+				Ruby::VertexShader::LayoutDataElement{
+					Ruby::VertexShader::LayoutDataElement::DataType::VECTOR_2F,
+					Ruby::VertexShader::LayoutDataElement::DataName::TEXTURE_COORDINATES
+				}
+			}
+		},
+		Ruby::FragmentShader{ Ruby::TextFile{ "assets\\shaders\\Default.frag" } }
 	);
 
+	allDiffuseMaterial = std::make_unique<Rhodochrosite::RayTracingMaterial>(*allDiffuse);
+	basicLightingMaterial = std::make_unique<Rhodochrosite::RayTracingMaterial>(*basicLighting);
+	allReflectiveMaterial = std::make_unique<Rhodochrosite::RayTracingMaterial>(*allReflective);
+	randomMaterialsMaterial = std::make_unique<Rhodochrosite::RayTracingMaterial>(*randomMaterials);
+
 	Ruby::Texture renderTarget{ rayTracer->getImage() };
-	Ruby::ScreenQuad screenQuad{ &renderTarget };
+
+	Ruby::PlaneGeometryData planeGeoData{};
+	Ruby::ScreenMaterial screenQuadMaterial{ renderTarget };
+	Ruby::Renderable screenRenderable{ planeGeoData, screenQuadMaterial };
 
 	// Default values
 	device = Rhodochrosite::RenderingDevice::CPU;
 	setAlgorithm(Rhodochrosite::RenderingAlgorithm::BASIC_LIGHTING);
 	setScene(Rhodochrosite::SceneName::ONE_SPHERE);
 
-	renderer.init(window.getProjectionMatrix());
 	float temp = 0.5f;
 
 	while (window.isOpen()) {
-		if (keyboard->KEY_ESCAPE) {
+		if (keyboard.KEY_ESCAPE) {
 			window.close();
 		}
 		
 		{ // Ray tracing
-			renderer.prep(cam.getViewMatrix());
-
+			renderer.beginFrame();
+			renderer.render(screenRenderable);
 			switch (device) {
 			case Rhodochrosite::RenderingDevice::CPU:
 				if (!sceneRendered) {
@@ -157,39 +217,34 @@ int main() {
 					renderTarget.updateData();
 					sceneRendered = true;
 				}
-
-				renderer.screenQuadRenderingPrep();
-
-				renderer.screenQuadRender(screenQuad);
-
-				renderer.screenQuadRenderingEnd();
+				screenRenderable.setMaterial(screenQuadMaterial);
 
 				break;
 			case Rhodochrosite::RenderingDevice::GPU:
-				activeProgram->use();
-				Ruby::ShaderProgram::upload("aspectRatio", (float)window.getHeight() / (float)window.getWidth());
-				Ruby::ShaderProgram::upload("cameraPosition", camera.position);
-				Ruby::ShaderProgram::upload("cameraDirection", camera.front.normalize());
-				Ruby::ShaderProgram::upload("pixelWidth", (int)rayTracer->getImage().getWidth());
-				Ruby::ShaderProgram::upload("pixelHeight", (int)rayTracer->getImage().getHeight());
-				Ruby::ShaderProgram::upload("time", time.getTime());
-				Ruby::ShaderProgram::upload("temp", temp);
+				Rhodochrosite::RayTracingMaterial::aspectRatio = (float)window.getHeight() / (float)window.getWidth();
+				Rhodochrosite::RayTracingMaterial::cameraPosition = camera.position;
+				Rhodochrosite::RayTracingMaterial::cameraDirection = camera.front.normalize();
+				Rhodochrosite::RayTracingMaterial::pixelWidth = (int)rayTracer->getImage().getWidth();
+				Rhodochrosite::RayTracingMaterial::pixelHeight = (int)rayTracer->getImage().getHeight();
+				Rhodochrosite::RayTracingMaterial::time = time.getTime();
 
-				screenQuad.render();
+				screenRenderable.setMaterial(*activeMaterial);
+
 				break;
 			}
+			renderer.render(screenRenderable);
 		}
 
 		{ // Camera Movement
-			if (mouse->button2 && device == Rhodochrosite::RenderingDevice::GPU) {
+			if (mouse.button2 && device == Rhodochrosite::RenderingDevice::GPU) {
 				window.disableCursor();
 				const float velocity = 5.0f * time.deltaTime;
-				if (keyboard->KEY_W) { camera.position = camera.position + (velocity * camera.front); }
-				if (keyboard->KEY_S) { camera.position = camera.position + (velocity * -camera.front); }
-				if (keyboard->KEY_A) { camera.position = camera.position + (velocity * -camera.right); }
-				if (keyboard->KEY_D) { camera.position = camera.position + (velocity * camera.right); }
-				if (keyboard->KEY_SPACE) { camera.position = camera.position + (velocity * Malachite::Vector3f::up); }
-				if (keyboard->KEY_LEFT_SHIFT) { camera.position = camera.position + (velocity * Malachite::Vector3f::down); }
+				if (keyboard.KEY_W) { camera.position = camera.position + (velocity * camera.front); }
+				if (keyboard.KEY_S) { camera.position = camera.position + (velocity * -camera.front); }
+				if (keyboard.KEY_A) { camera.position = camera.position + (velocity * -camera.right); }
+				if (keyboard.KEY_D) { camera.position = camera.position + (velocity * camera.right); }
+				if (keyboard.KEY_SPACE) { camera.position = camera.position + (velocity * Malachite::Vector3f::up); }
+				if (keyboard.KEY_LEFT_SHIFT) { camera.position = camera.position + (velocity * Malachite::Vector3f::down); }
 			}
 			else {
 				window.enableCursor();
@@ -317,15 +372,13 @@ int main() {
 
 				renderer.imGuiEnd();
 			}
-			renderer.end();
+			renderer.endFrame();
 		}
 
 		window.pollEvents();
 		window.swapBuffers();
 		time.endFrame();
 	}
-
-	renderer.imGuiTerminate();
 }
 
 void uploadSphere(const Rhodochrosite::Sphere& sphere, unsigned int index) {
@@ -350,22 +403,6 @@ void uploadSphere(const Rhodochrosite::Sphere& sphere, unsigned int index) {
 	Ruby::ShaderProgram::upload("spheres[" + std::to_string(index) + "].material", (int)mat);
 }
 
-void uploadLight(const Ruby::DirectionalLight& light, unsigned int index) {
-	Ruby::ShaderProgram::upload("dirLights[" + std::to_string(index) + "].direction", light.direction);
-}
-
-void uploadScene(const Rhodochrosite::Scene& scene) {
-	Ruby::ShaderProgram::upload("numberOfSpheres", (int)scene.spheres.size());
-	for (unsigned int i = 0; i < scene.spheres.size(); i++) {
-		uploadSphere(scene.spheres[i], i);
-	}
-
-	Ruby::ShaderProgram::upload("numberOfLights", (int)scene.lights.size());
-	for (unsigned int i = 0; i < scene.lights.size(); i++) {
-		uploadLight(scene.lights[i], i);
-	}
-}
-
 void setScene(const Rhodochrosite::SceneName newScene) {
 	scene = newScene;
 	switch (scene) {
@@ -374,40 +411,40 @@ void setScene(const Rhodochrosite::SceneName newScene) {
 		rayTracer->setScene(sceneCollection.oneSphere);
 
 		// GPU side
-		activeProgram->use();
-		uploadScene(sceneCollection.oneSphere);
+		Rhodochrosite::RayTracingMaterial::spheres = sceneCollection.oneSphere.spheres;
+		Rhodochrosite::RayTracingMaterial::dirLights = sceneCollection.oneSphere.lights;
 		break;
 	case Rhodochrosite::SceneName::SPHERE_ON_PLANE:
 		// CPU side
 		rayTracer->setScene(sceneCollection.sphereOnPlane);
 
 		// GPU side
-		activeProgram->use();
-		uploadScene(sceneCollection.sphereOnPlane);
+		Rhodochrosite::RayTracingMaterial::spheres = sceneCollection.sphereOnPlane.spheres;
+		Rhodochrosite::RayTracingMaterial::dirLights = sceneCollection.sphereOnPlane.lights;
 		break;
 	case Rhodochrosite::SceneName::TWO_SPHERE:
 		// CPU side
 		rayTracer->setScene(sceneCollection.twoSpheres);
 
 		// GPU side
-		activeProgram->use();
-		uploadScene(sceneCollection.twoSpheres);
+		Rhodochrosite::RayTracingMaterial::spheres = sceneCollection.twoSpheres.spheres;
+		Rhodochrosite::RayTracingMaterial::dirLights = sceneCollection.twoSpheres.lights;
 		break;
 	case Rhodochrosite::SceneName::LARGE_AMOUNT_OF_SPHERES:
 		// CPU side
 		rayTracer->setScene(sceneCollection.lotsOfSpheres);
 
 		// GPU side
-		activeProgram->use();
-		uploadScene(sceneCollection.lotsOfSpheres);
+		Rhodochrosite::RayTracingMaterial::spheres = sceneCollection.lotsOfSpheres.spheres;
+		Rhodochrosite::RayTracingMaterial::dirLights = sceneCollection.lotsOfSpheres.lights;
 		break;
 	case Rhodochrosite::SceneName::RANDOM_SPHERES:
 		// CPU side
 		rayTracer->setScene(sceneCollection.randomSpheres);
 
 		// GPU side
-		activeProgram->use();
-		uploadScene(sceneCollection.randomSpheres);
+		Rhodochrosite::RayTracingMaterial::spheres = sceneCollection.randomSpheres.spheres;
+		Rhodochrosite::RayTracingMaterial::dirLights = sceneCollection.randomSpheres.lights;
 		break;
 	}
 }
@@ -424,30 +461,28 @@ void setAlgorithm(Rhodochrosite::RenderingAlgorithm newAlgorithm) {
 		cpuAlg = &Rhodochrosite::Renderer::basicLightingAlgorithm;
 
 		// GPU side
-		activeProgram = basicLighting.get();
+		activeMaterial = basicLightingMaterial.get();
 		break;
 	case Rhodochrosite::RenderingAlgorithm::ALL_REFLECTIVE:
 		// CPU side
 		cpuAlg = &Rhodochrosite::Renderer::allReflectiveAlgorithm;
 
 		// GPU side
-		activeProgram = allReflective.get();
+		activeMaterial = allReflectiveMaterial.get();
 		break;
-		/*case Rhodochrosite::RenderingAlgorithm::RANDOM_MATERIALS:
-		break;*/
 	case Rhodochrosite::RenderingAlgorithm::ALL_DIFFUSE:
 		// CPU side
 		cpuAlg = &Rhodochrosite::Renderer::allDiffuseAlgorithm;
 
 		// GPU side
-		activeProgram = allDiffuse.get();
+		activeMaterial = allDiffuseMaterial.get();
 		break;
 	case Rhodochrosite::RenderingAlgorithm::RANDOM_MATERIALS:
 		// CPU side
 		cpuAlg = &Rhodochrosite::Renderer::randomMaterialsAlgorithm;
 
 		// GPU side
-		activeProgram = randomMaterials.get();
+		activeMaterial = randomMaterialsMaterial.get();
 		break;
 	}
 	rayTracer->setAlgorithm(cpuAlg);

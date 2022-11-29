@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Camera.h"
-#include "Image.h"
+#include "Resources/Image.h"
 #include "Ray.h"
 #include "Scene.h"
 #include "Sphere.h"

@@ -33,7 +33,7 @@ uniform Sphere spheres[32];
 uniform int numberOfSpheres;
 
 uniform DirectionalLight dirLights[8];
-uniform int numberOfLights;
+uniform int numberOfdirectionalLights;
 
 uniform float aspectRatio;
 uniform int pixelWidth;
@@ -161,7 +161,7 @@ void main() {
 			vec3 normal = normalize(hitLocation - hit.hitSphere.origin);
 
 			float lightIntensity = 0.0;
-			for (int i = 0; i < numberOfLights; i++) {
+			for (int i = 0; i < numberOfdirectionalLights; i++) {
 				lightIntensity += max(dot(normal, -dirLights[i].direction), 0.0);
 			}
 			

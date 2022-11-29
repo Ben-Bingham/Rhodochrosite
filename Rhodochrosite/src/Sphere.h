@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Colour.h"
+#include "Utility/Colour.h"
 #include "Vector.h"
 
 namespace Rhodochrosite {

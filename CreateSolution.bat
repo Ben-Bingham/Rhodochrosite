@@ -6,6 +6,6 @@ DEL /q .vs
 rmdir /q /s build
 rmdir /q /s Dependencies\Gemstone\build
 
-CALL vendor\premake\premake5.exe vs2019
+CALL vendor\premake\premake5.exe vs2022
 
 pause
