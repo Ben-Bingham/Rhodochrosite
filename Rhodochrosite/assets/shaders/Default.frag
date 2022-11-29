@@ -119,11 +119,12 @@ Ray scatterRayReflective(Ray incidentRay, Hit hit, vec3 hitLocation, vec3 normal
 }
 
 Ray scatterRayDiffuse(Ray incidentRay, Hit hit, vec3 hitLocation, vec3 normal, float randSeed) {
-	return Ray(hitLocation, reflect(incidentRay.direction, normal + randomVec3InUnitSphere(randSeed + 3.0)));
+	vec3 scatterDirection = normal + normalize(randomVec3InUnitSphere(randSeed));
+	return Ray(hitLocation + (normal * 0.00001), normalize(scatterDirection));
 }
 
 vec3 backgroundColour = vec3(0.6, 0.7, 0.9);
-int maxNumberOfBounces = 50;
+int maxNumberOfBounces = 10;
 int numberOfSamples = 4;
 float distanceToImagePlane = 1.0;
 
@@ -132,8 +133,11 @@ void main() {
 
 	vec3 colour = vec3(0, 0, 0);
 	for (int i = 0; i < numberOfSamples; i++) {
-		float randX = randomRange(0, 1 / pixelWidth, randSeed + i);
-		float randY = randomRange(0, 1 / pixelHeight, randSeed + i);
+		float randX = randomRange(0, 1, randSeed + i);
+		float randY = randomRange(0, 1, randSeed + i);
+
+		randX /= pixelWidth;
+		randY /= pixelHeight;
 
 		vec2 texCords;
 		texCords.x = (textureCordinates.x + randX) * 2.0 - 1.0;
@@ -171,15 +175,11 @@ void main() {
 			multiplier *= 0.5;
 
 			if (hit.hitSphere.material == 0) {
-				ray = scatterRayDiffuse(ray, hit, hitLocation, normal, cos(randSeed + i + 4234.634553));
+				ray = scatterRayDiffuse(ray, hit, hitLocation, normal, cos(randSeed + sin(1234.5678)));
 			}
 			else if (hit.hitSphere.material == 1) {
 				ray = scatterRayReflective(ray, hit, hitLocation, normal);
 			}
-			else { //TODO refraction
-				ray = scatterRayReflective(ray, hit, hitLocation, normal);
-			}
-
 		}
 		colour += tempColour;
 	}

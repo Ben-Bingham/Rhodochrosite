@@ -33,15 +33,13 @@ uniform Sphere spheres[32];
 uniform int numberOfSpheres;
 
 uniform DirectionalLight dirLights[8];
-uniform int numberOfLights;
+uniform int numberOfdirectionalLights;
 
 uniform float aspectRatio;
 uniform int pixelWidth;
 uniform int pixelHeight;
 
 uniform float time;
-
-uniform float temp;
 
 #define FLT_MAX 3.402823466e+38
 
@@ -55,8 +53,6 @@ float PHI = 1.61803398874989484820459;  // Golden Ratio
 float randomFloat(float seed) {
 	vec2 coord = vec2(textureCordinates.x * 1000, textureCordinates.y * 1000 * aspectRatio);
     return fract(tan(distance(coord * PHI, coord) * tan(seed)) * coord.x);
-	//return cos(temp + seed + textureCordinates.x * textureCordinates.y);
-//	return temp;
 }
 
 float randomRange(float minVal, float maxVal, float seed) { // [min, max[
@@ -133,40 +129,25 @@ Hit hitSphere(Ray ray) {
 }
 
 Ray scatterRayDiffuse(Ray incidentRay, Hit hit, vec3 hitLocation, vec3 normal, float randSeed) {
-	//return Ray(hitLocation, reflect(incidentRay.direction, normal + randomVec3InUnitSphere(randSeed + 2.0)));
-	//vec3 scatterDirection = normal;
-	vec3 scatterDirection = normal + temp * randomVec3InUnitSphere(randSeed);
-	//scatterDirection = normal + (randomVec3InUnitSphere(randSeed) * temp);
-	//scatterDirection = normal + (randomVec3InUnitSphere(randSeed) * temp);
-	//if (temp > 0) {
-	//	scatterDirection = normalize((normal) + normalize(randomVec3InUnitSphere(randSeed)));
-	//}
-	//else {
-	//	
-	//}
-	//if (nearZero(scatterDirection)) {
-	//	scatterDirection = normal;
-	//}
-	return Ray(hitLocation + (normal * 0.00001), scatterDirection);
+	vec3 scatterDirection = normal + normalize(randomVec3InUnitSphere(randSeed));
+	return Ray(hitLocation + (normal * 0.00001), normalize(scatterDirection));
 }
 
 vec3 backgroundColour = vec3(0.6, 0.7, 0.9);
-int maxNumberOfBounces = 10;
-int numberOfSamples = 1;
+int maxNumberOfBounces = 50;
+int numberOfSamples = 4;
 float distanceToImagePlane = 1.0;
 
 void main() {
 	highp float randSeed = (time / time - time - time * time + time) / time;
-	//highp float randSeed = temp;
 
 	vec3 colour = vec3(0, 0, 0);
 	for (int i = 0; i < numberOfSamples; i++) {
-		float randX = randomRange(0, 1 / pixelWidth, randSeed + i);
-		float randY = randomRange(0, 1 / pixelHeight, randSeed + i);
+		float randX = randomRange(0, 1, randSeed + i);
+		float randY = randomRange(0, 1, randSeed + i);
 
-		colour = vec3(randX * pixelWidth, randY * pixelHeight, 0); // THIS IS WRONT SHOULD BE VISIBLE ON SCREEN TODO
-		FragColor = vec4(colour, 1.0);
-		return;
+		randX /= pixelWidth;
+		randY /= pixelHeight;
 
 		vec2 texCords;
 		texCords.x = (textureCordinates.x + randX) * 2.0 - 1.0;
@@ -193,24 +174,21 @@ void main() {
 			
 			vec3 origin = ray.origin - hit.hitSphere.origin;
 			vec3 hitLocation = origin + ray.direction * hit.distanceToHit;
-			//vec3 normal = normalize(hitLocation - hit.hitSphere.origin);
 			vec3 normal = normalize(hitLocation);
 
 			hitLocation += hit.hitSphere.origin;
 
 			float lightIntensity = 0.0;
-			for (int k = 0; k < numberOfLights; k++) {
-				lightIntensity += max(dot(normal, -dirLights[k].direction), 0.0);
+			for (int i = 0; i < numberOfdirectionalLights; i++) {
+				lightIntensity += max(dot(normal, -dirLights[i].direction), 0.0);
 			}
-			
+
 			lightIntensity = clamp(lightIntensity, 0.0, 1.0);
 
 			tempColour += hit.hitSphere.colour.xyz * multiplier * lightIntensity;
-			//tempColour = (ray.direction + 1.0) / 2.0;
 			multiplier *= 0.5;
 
 			ray = scatterRayDiffuse(ray, hit, hitLocation, normal, cos(randSeed + sin(1234.5678)));
-			//tempColour = ray.direction;
 		}
 		colour += tempColour;
 	}

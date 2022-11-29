@@ -33,7 +33,7 @@ uniform Sphere spheres[32];
 uniform int numberOfSpheres;
 
 uniform DirectionalLight dirLights[8];
-uniform int numberOfLights;
+uniform int numberOfdirectionalLights;
 
 uniform float aspectRatio;
 uniform int pixelWidth;
@@ -115,7 +115,7 @@ Hit hitSphere(Ray ray) {
 }
 
 Ray scatterRayReflective(Ray incidentRay, Hit hit, vec3 hitLocation, vec3 normal) {
-	return Ray(hitLocation, reflect(incidentRay.direction, normal));
+	return Ray(hitLocation, normalize(reflect(incidentRay.direction, normal)));
 }
 
 vec3 backgroundColour = vec3(0.6, 0.7, 0.9);
@@ -128,8 +128,11 @@ void main() {
 
 	vec3 colour = vec3(0, 0, 0);
 	for (int i = 0; i < numberOfSamples; i++) {
-		float randX = randomRange(0, 1 / pixelWidth, randSeed + i);
-		float randY = randomRange(0, 1 / pixelHeight, randSeed + i);
+		float randX = randomRange(0, 1, randSeed + i);
+		float randY = randomRange(0, 1, randSeed + i);
+
+		randX /= pixelWidth;
+		randY /= pixelHeight;
 
 		vec2 texCords;
 		texCords.x = (textureCordinates.x + randX) * 2.0 - 1.0;
@@ -157,7 +160,7 @@ void main() {
 			vec3 normal = normalize(hitLocation - hit.hitSphere.origin);
 
 			float lightIntensity = 0.0;
-			for (int i = 0; i < numberOfLights; i++) {
+			for (int i = 0; i < numberOfdirectionalLights; i++) {
 				lightIntensity += max(dot(normal, -dirLights[i].direction), 0.0);
 			}
 			
