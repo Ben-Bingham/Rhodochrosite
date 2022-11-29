@@ -321,15 +321,15 @@ int main() {
 						setAlgorithm(Rhodochrosite::RenderingAlgorithm::BASIC_LIGHTING);
 						sceneRendered = false;
 					}
-					if (ImGui::Button("Diffuse")) {
+					if (device == Rhodochrosite::RenderingDevice::GPU && ImGui::Button("Diffuse")) {
 						setAlgorithm(Rhodochrosite::RenderingAlgorithm::ALL_DIFFUSE);
 						sceneRendered = false;
 					}
-					if (ImGui::Button("Reflective")) {
+					if (device == Rhodochrosite::RenderingDevice::GPU && ImGui::Button("Reflective")) {
 						setAlgorithm(Rhodochrosite::RenderingAlgorithm::ALL_REFLECTIVE);
 						sceneRendered = false;
 					}
-					if (ImGui::Button("Random Materials")) {
+					if (device == Rhodochrosite::RenderingDevice::GPU && ImGui::Button("Random Materials")) {
 						setAlgorithm(Rhodochrosite::RenderingAlgorithm::RANDOM_MATERIALS);
 						sceneRendered = false;
 					}
