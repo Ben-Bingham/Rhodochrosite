@@ -1,5 +1,7 @@
 # Rhodochrosite
 
+Rhodochrosite is a Ray tracer implemented in the Gemstone Engine.
+
 CPU rendering with a basic lighting algorithm
 ![image](https://user-images.githubusercontent.com/94578530/205136535-1efb409d-36cb-40c7-8c80-c59cf272ed02.png)
 
