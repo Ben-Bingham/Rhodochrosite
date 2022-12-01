@@ -310,6 +310,7 @@ int main() {
 					if (ImGui::Button("CPU Rendering")) {
 						device = Rhodochrosite::RenderingDevice::CPU;
 						sceneRendered = false;
+						setAlgorithm(Rhodochrosite::RenderingAlgorithm::BASIC_LIGHTING);
 					}
 					if (ImGui::Button("GPU Rendering")) {
 						device = Rhodochrosite::RenderingDevice::GPU;
@@ -364,8 +365,6 @@ int main() {
 
 					ImGui::Text("Frame Time: ");
 					ImGui::Text((std::to_string(time.deltaTime * 1000.0f) + "miliseconds").c_str());
-
-					ImGui::SliderFloat("Temp", &temp, -1.0f, 1.0f);
 
 					ImGui::End();
 				}
