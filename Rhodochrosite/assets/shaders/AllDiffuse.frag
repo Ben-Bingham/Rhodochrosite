@@ -50,10 +50,19 @@ vec3 at(Ray ray, float t) {
 
 float PHI = 1.61803398874989484820459;  // Golden Ratio   
 
+vec2 randomState;
+
 float randomFloat(float seed) {
-	vec2 coord = vec2(textureCordinates.x * 1000, textureCordinates.y * 1000 * aspectRatio);
-    return fract(tan(distance(coord * PHI, coord) * tan(seed)) * coord.x);
+    randomState.x = fract(sin(dot(randomState.xy, vec2(12.9898, 78.233))) * 43758.5453);
+    randomState.y = fract(sin(dot(randomState.xy, vec2(12.9898, 78.233))) * 43758.5453);;
+    
+    return randomState.x;
 }
+
+//float randomFloat(float seed) {
+//	vec2 coord = vec2(textureCordinates.x * 1000, textureCordinates.y * 1000 * aspectRatio);
+//    return fract(tan(distance(coord * PHI, coord) * tan(seed)) * coord.x);
+//}
 
 float randomRange(float minVal, float maxVal, float seed) { // [min, max[
 	return minVal + (maxVal - minVal) * randomFloat(seed);
@@ -71,14 +80,34 @@ float lengthSquared(vec3 vector) {
 	return vector.x * vector.x + vector.y * vector.y + vector.z * vector.z;
 }
 
+//vec3 randomVec3InUnitSphere(float seed) {
+//	int i = 0;
+//	while (true) {
+//		i++;
+//        vec3 vec = randomVec3InRange(-1,1, seed * i);
+//        if (lengthSquared(vec) >= 1) continue;
+//        return vec;
+//	}
+//}
+
+const float PI = 3.14159265359;
+
 vec3 randomVec3InUnitSphere(float seed) {
-	int i = 0;
-	while (true) {
-		i++;
-        vec3 vec = randomVec3InRange(-1,1, seed * i);
-        if (lengthSquared(vec) >= 1) continue;
-        return vec;
-	}
+    // This function was taken from:
+    //https://github.com/riccardoprosdocimi/real-time-ray-tracer/blob/master/shaders/frag.glsl
+	vec3 randomVector = randomVec3(seed);
+	float phi = 2.0 * PI * randomVector.x;
+	float cosTheta = 2.0 * randomVector.y - 1.0;
+	float u = randomVector.z;
+    
+	float theta = acos(cosTheta);
+	float r = pow(u, 1.0 / 3.0);
+    
+	float x = r * sin(theta) * cos(phi);
+	float y = r * sin(theta) * sin(phi);
+	float z = r * cos(theta);
+    
+	return vec3(x, y, z);
 }
 
 bool nearZero(vec3 vector) {
@@ -139,12 +168,14 @@ int numberOfSamples = 4;
 float distanceToImagePlane = 1.0;
 
 void main() {
-	highp float randSeed = (time / time - time - time * time + time) / time;
+	randomState = textureCordinates.xy * time;
+
+	//highp float randSeed = (time / time - time - time * time + time) / time;
 
 	vec3 colour = vec3(0, 0, 0);
 	for (int i = 0; i < numberOfSamples; i++) {
-		float randX = randomRange(0, 1, randSeed + i);
-		float randY = randomRange(0, 1, randSeed + i);
+		float randX = randomRange(0, 1, 3.2042 + i);
+		float randY = randomRange(0, 1, 2.453 + i);
 
 		randX /= pixelWidth;
 		randY /= pixelHeight;
@@ -188,7 +219,7 @@ void main() {
 			tempColour += hit.hitSphere.colour.xyz * multiplier * lightIntensity;
 			multiplier *= 0.5;
 
-			ray = scatterRayDiffuse(ray, hit, hitLocation, normal, cos(randSeed + sin(1234.5678)));
+			ray = scatterRayDiffuse(ray, hit, hitLocation, normal, 0.5423442);
 		}
 		colour += tempColour;
 	}
